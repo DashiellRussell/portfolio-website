@@ -5,7 +5,6 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <Iridescence
-        className="absolute inset-0 -z-10 w-full h-full"
         color={[1, 1, 1]}
         mouseReact={false}
         amplitude={0.1}
