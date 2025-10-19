@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,7 +75,8 @@
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -120,21 +121,5 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-
-  /* Added smooth scrolling for navigation */
-  html {
-    scroll-behavior: smooth;
-  }
-}
-
-/* Added custom gradient text utility */
-@layer utilities {
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent;
-  }
-
-  .text-balance {
-    text-wrap: balance;
   }
 }
