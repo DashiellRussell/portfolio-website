@@ -17,9 +17,9 @@ const navItems = [
 ]
 
 const socialLinks = [
-  { icon: Github, href: "https://github.com", label: "GitHub" },
-  { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn" },
-  { icon: Instagram, href: "https://instagram.com", label: "Instagram" },
+  { icon: Github, href: "https://github.com/DashiellRussell", label: "GitHub" },
+  { icon: Linkedin, href: "www.linkedin.com/in/dashiell-russell-9973482a1", label: "LinkedIn" },
+  { icon: Instagram, href: "https://www.instagram.com/dashiell_russell/", label: "Instagram" },
   { icon: Mail, href: "mailto:dashiell.russell@gmail.com", label: "Email" },
 ]
 

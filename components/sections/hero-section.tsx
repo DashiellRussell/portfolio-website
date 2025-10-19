@@ -107,7 +107,7 @@ export function HeroSection() {
               {/* Decorative elements */}
               <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl" />
               <div className="relative rounded-2xl overflow-hidden border-4 border-primary/20 shadow-2xl">
-                <img src="" alt="Dashiell Russell" className="w-full h-full object-cover" />
+                <img src="/profile-pic.jpeg" alt="Dashiell Russell" className="w-full h-full object-cover" />
               </div>
               {/* Floating badge */}
               <motion.div
