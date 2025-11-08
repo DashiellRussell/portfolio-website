@@ -1,0 +1,201 @@
+# SEO & Metadata Setup Guide
+
+Your portfolio now has comprehensive metadata and icons! Here's what's been added and what you need to update when deploying.
+
+## ✅ What's Been Added
+
+### 1. **Custom Icons (DR Logo with Gradient)**
+Next.js automatically generates icons from these files:
+- `app/icon.tsx` - Browser favicon (32x32, auto-generated PNG)
+- `app/apple-icon.tsx` - iOS home screen icon (180x180, auto-generated PNG)
+- `app/opengraph-image.tsx` - Social media preview (1200x630, auto-generated PNG)
+
+All icons feature your "DR" logo with the blue-to-cyan gradient and are dynamically generated at build time!
+
+### 2. **Rich Metadata**
+- **SEO**: Title, description, keywords
+- **Open Graph**: Facebook, LinkedIn preview cards
+- **Twitter Cards**: Rich Twitter previews
+- **Web Manifest**: PWA support (installable)
+- **Robots.txt**: Search engine crawling rules
+
+### 3. **Social Preview**
+When someone shares your link, they'll see:
+- Your DR logo
+- Name: "Dashiell Russell"
+- Title: "Mechatronics Engineer & Full-Stack Developer"
+- Skills: "Hardware • Software • Robotics • PCB Design"
+
+## 🔧 Before Deploying
+
+### Update Your Domain
+
+In `app/layout.tsx`, find this line:
+
+```typescript
+metadataBase: new URL('https://dashiellrussell.com'),
+```
+
+Replace `dashiellrussell.com` with your actual domain when you deploy.
+
+Also update in:
+- `openGraph.url`: Line 52
+- `authors[0].url`: Line 33
+- `public/robots.txt`: Update sitemap URL
+
+### Optional: Update Twitter Handle
+
+In `app/layout.tsx`, line 72:
+
+```typescript
+creator: '@dashiell_russell', // Update with your actual Twitter/X handle
+```
+
+## 🧪 Testing Your Metadata
+
+### 1. **Test Favicon**
+- Look at your browser tab - you should see the "DR" logo
+- Right-click the page → "Add to Home Screen" (mobile) to see the icon
+
+### 2. **Test Social Media Previews**
+
+**Facebook/LinkedIn Debugger:**
+- Go to: https://developers.facebook.com/tools/debug/
+- Enter your URL and click "Debug"
+- You should see your OG image and metadata
+
+**Twitter Card Validator:**
+- Go to: https://cards-dev.twitter.com/validator
+- Enter your URL
+- Preview how your link appears on Twitter
+
+**Generic Preview:**
+- Go to: https://www.opengraph.xyz/
+- Enter your URL to see all metadata
+
+### 3. **Test in Browser Dev Tools**
+
+Open DevTools → Elements → `<head>` and look for:
+```html
+<meta property="og:title" content="..." />
+<meta property="og:image" content="..." />
+<meta name="twitter:card" content="..." />
+<link rel="icon" href="/icon.svg" />
+```
+
+## 📱 PWA Features
+
+Your site can now be "installed" like an app:
+
+**On Mobile:**
+1. Visit your site
+2. Browser will prompt "Add to Home Screen"
+3. Icon appears on home screen with your DR logo
+
+**On Desktop (Chrome/Edge):**
+1. Look for install icon in address bar
+2. Click to install
+3. Opens in its own window
+
+## 🔍 SEO Keywords Included
+
+Your site is optimized for these search terms:
+- Mechatronics Engineering
+- Robotics
+- PCB Design
+- Embedded Systems
+- Full-Stack Developer
+- Arduino, IoT, Circuit Design
+- React, Next.js
+
+## 📊 When You Deploy to Vercel
+
+Vercel automatically handles:
+- OG image generation
+- Sitemap generation
+- robots.txt serving
+- Icon optimization
+
+But you should:
+1. Update the `metadataBase` URL to your actual domain
+2. Test all social previews after deploying
+3. Submit your sitemap to Google Search Console
+
+## 🎨 Customizing Icons
+
+If you want to modify the icons:
+
+**Edit the React components in `/app/`:**
+- `app/icon.tsx` - Main favicon
+- `app/apple-icon.tsx` - iOS icon
+- `app/opengraph-image.tsx` - Social preview
+
+The gradient colors are:
+- Primary: `#6B9EFF` (blue)
+- Accent: `#4DD0E1` (cyan)
+
+These are React components using Next.js's `ImageResponse` API, so you can customize the design with React/JSX!
+
+## 📈 Adding Analytics Tracking
+
+You already have Vercel Analytics. To add more tracking:
+
+**Google Analytics:**
+```typescript
+// In app/layout.tsx, add to <head>
+<Script src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID" />
+<Script id="google-analytics">
+  {`
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'GA_MEASUREMENT_ID');
+  `}
+</Script>
+```
+
+## 🚀 Quick Checklist Before Going Live
+
+- [ ] Update `metadataBase` URL in layout.tsx
+- [ ] Update Twitter handle (if you have one)
+- [ ] Test social previews on all platforms
+- [ ] Verify favicon appears correctly
+- [ ] Check mobile "Add to Home Screen" works
+- [ ] Submit sitemap to Google Search Console
+- [ ] Set up Google Analytics (optional)
+- [ ] Test contact form with real email
+
+## 📝 Files Created
+
+```
+app/
+├── icon.tsx            # Generates favicon (32x32 PNG)
+├── apple-icon.tsx      # Generates iOS icon (180x180 PNG)
+├── opengraph-image.tsx # Generates social preview (1200x630 PNG)
+└── layout.tsx          # Updated with full metadata
+
+public/
+├── site.webmanifest    # PWA configuration
+└── robots.txt          # Search engine rules
+```
+
+All icons are dynamically generated by Next.js and feature your gradient "DR" logo!
+
+## 🆘 Troubleshooting
+
+**Icons not showing:**
+- Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+- Clear browser cache
+- Check browser DevTools → Network tab for 404s
+
+**Social preview not updating:**
+- Social platforms cache metadata for 24-48 hours
+- Use the Facebook Debugger "Scrape Again" button
+- Add `?v=1` to your URL to force a refresh
+
+**OG image not displaying:**
+- Verify the image path is correct: `/og-image.png`
+- Check that the image was committed to your repo
+- Ensure the image dimensions are exactly 1200x630
+
+Need help? Check the console for errors or test with the validators linked above!
