@@ -44,7 +44,7 @@ export function HeroSection() {
                 transition={{ delay: 0.4 }}
                 className="text-2xl md:text-3xl text-muted-foreground"
               >
-                Full-Stack Developer
+                Mechatronics Engineer & Full-Stack Developer
               </motion.p>
             </div>
 
@@ -54,8 +54,8 @@ export function HeroSection() {
               transition={{ delay: 0.5 }}
               className="text-lg text-muted-foreground leading-relaxed max-w-xl"
             >
-              I craft beautiful, performant web experiences with modern technologies. Specializing in React, Next.js,
-              and TypeScript to bring ideas to life.
+              Bridging the gap between hardware and software. From PCB design and robotics to modern web applications,
+              I bring innovative ideas to life across the full technology stack.
             </motion.p>
 
             <motion.div
@@ -84,16 +84,16 @@ export function HeroSection() {
               className="flex flex-wrap gap-8 pt-8 border-t"
             >
               <div>
+                <div className="text-3xl font-bold text-primary">15+</div>
+                <div className="text-sm text-muted-foreground">Projects Built</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-primary">8+</div>
+                <div className="text-sm text-muted-foreground">Custom PCBs</div>
+              </div>
+              <div>
                 <div className="text-3xl font-bold text-primary">3+</div>
                 <div className="text-sm text-muted-foreground">Years Experience</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-primary">10+</div>
-                <div className="text-sm text-muted-foreground">Projects Completed</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-primary">10+</div>
-                <div className="text-sm text-muted-foreground">Happy Clients</div>
               </div>
             </motion.div>
           </motion.div>

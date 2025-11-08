@@ -8,61 +8,61 @@ import { motion } from "framer-motion"
 
 const projects = [
   {
+    title: "Autonomous Line-Following Robot",
+    description:
+      "Built a custom PCB-based robot with PID control algorithms for precise line tracking. Features IR sensor array, motor drivers, and ESP32 microcontroller. Competed in university robotics competition.",
+    image: "/ecommerce-platform-dashboard.jpg",
+    tags: ["PCB Design", "ESP32", "C++", "PID Control", "KiCAD"],
+    liveUrl: "#",
+    githubUrl: "#",
+    featured: true,
+  },
+  {
+    title: "IoT Environmental Monitor",
+    description:
+      "Designed and manufactured custom PCB for multi-sensor environmental monitoring system. Real-time data visualization web dashboard with Next.js. Tracks temperature, humidity, air quality, and more.",
+    image: "/task-management-interface.jpg",
+    tags: ["PCB Design", "Arduino", "React", "Next.js", "MQTT"],
+    liveUrl: "#",
+    githubUrl: "#",
+    featured: true,
+  },
+  {
+    title: "Robotic Arm Control System",
+    description:
+      "6-axis robotic arm with custom inverse kinematics solver. Built control interface using React and communicates with Arduino via serial. Features path planning and object detection using OpenCV.",
+    image: "/ai-content-generator-ui.jpg",
+    tags: ["ROS", "Python", "OpenCV", "Arduino", "React"],
+    liveUrl: "#",
+    githubUrl: "#",
+    featured: true,
+  },
+  {
+    title: "Smart Home Automation Hub",
+    description:
+      "Centralized home automation system with custom PCB design. Controls lights, temperature, and security systems. Web interface built with Next.js and mobile app integration.",
+    image: "/weather-dashboard-app.jpg",
+    tags: ["ESP32", "Next.js", "PCB Design", "MQTT", "TypeScript"],
+    liveUrl: "#",
+    githubUrl: "#",
+    featured: false,
+  },
+  {
     title: "E-Commerce Platform",
     description:
-      "A full-featured e-commerce platform with product management, shopping cart, payment integration, and admin dashboard. Built with Next.js and Stripe.",
-    image: "/ecommerce-platform-dashboard.jpg",
+      "Full-stack e-commerce platform with product management, shopping cart, payment integration via Stripe, and admin dashboard. Optimized for performance and SEO.",
+    image: "/portfolio-cms-admin.jpg",
     tags: ["Next.js", "TypeScript", "Stripe", "PostgreSQL"],
     liveUrl: "#",
     githubUrl: "#",
-    featured: true,
-  },
-  {
-    title: "Task Management App",
-    description:
-      "Collaborative task management application with real-time updates, team workspaces, and project tracking. Features drag-and-drop interface.",
-    image: "/task-management-interface.jpg",
-    tags: ["React", "Node.js", "Socket.io", "MongoDB"],
-    liveUrl: "#",
-    githubUrl: "#",
-    featured: true,
-  },
-  {
-    title: "AI Content Generator",
-    description:
-      "AI-powered content generation tool that helps create blog posts, social media content, and marketing copy using advanced language models.",
-    image: "/ai-content-generator-ui.jpg",
-    tags: ["Next.js", "OpenAI", "Tailwind", "Supabase"],
-    liveUrl: "#",
-    githubUrl: "#",
-    featured: true,
-  },
-  {
-    title: "Weather Dashboard",
-    description:
-      "Beautiful weather dashboard with forecasts, interactive maps, and location-based alerts. Responsive design for all devices.",
-    image: "/weather-dashboard-app.jpg",
-    tags: ["React", "Weather API", "Charts", "CSS"],
-    liveUrl: "#",
-    githubUrl: "#",
     featured: false,
   },
   {
-    title: "Portfolio CMS",
+    title: "Custom Drone Flight Controller",
     description:
-      "Headless CMS for managing portfolio content with a modern admin interface. Supports markdown, media uploads, and SEO optimization.",
-    image: "/portfolio-cms-admin.jpg",
-    tags: ["Next.js", "Prisma", "PostgreSQL", "AWS S3"],
-    liveUrl: "#",
-    githubUrl: "#",
-    featured: false,
-  },
-  {
-    title: "Fitness Tracker",
-    description:
-      "Mobile-first fitness tracking app with workout logging, progress charts, and personalized recommendations based on user goals.",
+      "Designed custom flight controller PCB with IMU sensor fusion and PID control. Implemented stabilization algorithms and telemetry system for real-time flight data monitoring.",
     image: "/fitness-tracker-mobile.jpg",
-    tags: ["React Native", "Firebase", "Redux", "Charts"],
+    tags: ["PCB Design", "C/C++", "IMU", "PID", "Telemetry"],
     liveUrl: "#",
     githubUrl: "#",
     featured: false,
@@ -82,7 +82,7 @@ export function ProjectsSection() {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">Featured Projects</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            A selection of my recent work and side projects
+            Hardware, software, and robotics projects showcasing end-to-end development
           </p>
         </motion.div>
 

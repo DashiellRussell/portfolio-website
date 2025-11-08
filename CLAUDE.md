@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js 15 portfolio website for Dashiell Russell (Mechatronics Engineering & Physics). It's a single-page application with multiple sections showcasing skills, projects, experience, and contact information. The site uses TypeScript, React 18, and Tailwind CSS 4 with shadcn/ui components.
+This is a Next.js 15 portfolio website for Dashiell Russell (Mechatronics Engineering & Physics). It's a single-page application showcasing an all-rounder skill set spanning both hardware and software domains - including robotics, PCB design, embedded systems, and full-stack web development. The site uses TypeScript, React 18, and Tailwind CSS 4 with shadcn/ui components, featuring vibrant blue/cyan color accents.
 
 ## Development Commands
 
@@ -114,7 +114,16 @@ This respects the configuration in `components.json` (new-york style, path alias
 ### Theme Customization
 - Modify CSS variables in `app/globals.css` (both `:root` and `.dark` selectors)
 - Use OKLCH color format for all theme colors
+- Current color scheme: Blue (250° hue) primary, Cyan/Teal (195° hue) accent
 - The site defaults to dark theme (`defaultTheme="dark"` in layout.tsx)
+- Button components include shadow/glow effects with color accents
+
+### Content Focus
+- Portfolio showcases both hardware and software projects
+- Hardware: PCB design, robotics, embedded systems, IoT devices
+- Software: Full-stack web development, React/Next.js applications
+- Skills section organized into: Software, Hardware & Electronics, Robotics & Embedded
+- Projects include mix of robotics, IoT, and web development work
 
 ### Type Safety
 - Strict TypeScript configuration enabled

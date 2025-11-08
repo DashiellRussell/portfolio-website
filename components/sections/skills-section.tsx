@@ -6,33 +6,33 @@ import { motion } from "framer-motion"
 
 const skillCategories = [
   {
-    category: "Frontend",
+    category: "Software",
     skills: [
-      { name: "React", level: 95 },
-      { name: "Next.js", level: 90 },
+      { name: "React/Next.js", level: 90 },
       { name: "TypeScript", level: 88 },
-      { name: "Tailwind CSS", level: 92 },
-      { name: "HTML/CSS", level: 95 },
-    ],
-  },
-  {
-    category: "Backend",
-    skills: [
+      { name: "Python", level: 85 },
+      { name: "C/C++", level: 82 },
       { name: "Node.js", level: 85 },
-      { name: "Express", level: 82 },
-      { name: "PostgreSQL", level: 80 },
-      { name: "MongoDB", level: 78 },
-      { name: "REST APIs", level: 90 },
     ],
   },
   {
-    category: "Tools & Others",
+    category: "Hardware & Electronics",
     skills: [
-      { name: "Git", level: 90 },
-      { name: "Docker", level: 75 },
-      { name: "AWS", level: 70 },
-      { name: "Figma", level: 85 },
-      { name: "CI/CD", level: 80 },
+      { name: "PCB Design", level: 85 },
+      { name: "Eagle/KiCAD", level: 80 },
+      { name: "Soldering & Assembly", level: 90 },
+      { name: "Circuit Analysis", level: 88 },
+      { name: "Power Systems", level: 75 },
+    ],
+  },
+  {
+    category: "Robotics & Embedded",
+    skills: [
+      { name: "Arduino/ESP32", level: 92 },
+      { name: "ROS", level: 75 },
+      { name: "Sensor Integration", level: 88 },
+      { name: "Motor Control", level: 85 },
+      { name: "Embedded C", level: 80 },
     ],
   },
 ]
@@ -41,23 +41,23 @@ const technologies = [
   "React",
   "Next.js",
   "TypeScript",
-  "JavaScript",
+  "Python",
+  "C/C++",
+  "Arduino",
+  "ESP32",
+  "Raspberry Pi",
+  "PCB Design",
+  "KiCAD",
+  "Eagle",
+  "Fusion 360",
+  "SolidWorks",
+  "ROS",
+  "MATLAB",
   "Node.js",
-  "Tailwind CSS",
-  "PostgreSQL",
-  "MongoDB",
-  "Express",
   "Git",
-  "Docker",
-  "AWS",
-  "Vercel",
-  "Figma",
-  "REST APIs",
-  "GraphQL",
-  "Redux",
-  "Zustand",
-  "Prisma",
-  "Supabase",
+  "Linux",
+  "3D Printing",
+  "CAD",
 ]
 
 export function SkillsSection() {
@@ -73,7 +73,7 @@ export function SkillsSection() {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">Skills & Expertise</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Technologies and tools I use to bring ideas to life
+            Hardware, software, and everything in between
           </p>
         </motion.div>
 

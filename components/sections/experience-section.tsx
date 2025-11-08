@@ -7,46 +7,46 @@ import { motion } from "framer-motion"
 
 const experiences = [
   {
-    company: "TechCorp Solutions",
-    position: "Senior Full-Stack Developer",
-    period: "2022 - Present",
-    location: "San Francisco, CA",
+    company: "University Robotics Lab",
+    position: "Robotics Research Assistant",
+    period: "2023 - Present",
+    location: "University Campus",
     description:
-      "Leading development of enterprise web applications using React and Node.js. Mentoring junior developers and establishing best practices for the team.",
+      "Working on autonomous navigation systems and embedded control algorithms. Designing custom PCBs for sensor integration and motor control in research robots.",
     achievements: [
-      "Architected and deployed 5+ production applications serving 100K+ users",
-      "Reduced application load time by 60% through optimization techniques",
-      "Implemented CI/CD pipeline reducing deployment time by 75%",
+      "Designed and manufactured 3+ custom PCBs for robotics research projects",
+      "Implemented sensor fusion algorithms achieving 95% accuracy in object detection",
+      "Published research paper on autonomous navigation systems",
     ],
-    technologies: ["React", "Next.js", "TypeScript", "AWS", "PostgreSQL"],
+    technologies: ["ROS", "PCB Design", "C++", "Python", "KiCAD", "Arduino"],
   },
   {
-    company: "StartupHub Inc",
-    position: "Full-Stack Developer",
-    period: "2020 - 2022",
+    company: "Tech Startup",
+    position: "Full-Stack Developer & Hardware Engineer",
+    period: "2022 - 2023",
     location: "Remote",
     description:
-      "Developed and maintained multiple client projects from concept to deployment. Collaborated with designers and product managers to deliver high-quality solutions.",
+      "Developed IoT solutions combining custom hardware design with web applications. Built end-to-end products from PCB design to cloud-based dashboards.",
     achievements: [
-      "Built 10+ responsive web applications for various clients",
-      "Improved code quality by implementing automated testing (90% coverage)",
-      "Contributed to open-source projects used by 1000+ developers",
+      "Created 5+ IoT products with custom PCB designs and web interfaces",
+      "Reduced production costs by 40% through optimized circuit design",
+      "Built real-time data monitoring dashboard serving 10K+ devices",
     ],
-    technologies: ["React", "Node.js", "MongoDB", "Express", "Docker"],
+    technologies: ["ESP32", "Next.js", "React", "PCB Design", "MQTT", "TypeScript"],
   },
   {
-    company: "Digital Agency Pro",
-    position: "Frontend Developer",
-    period: "2019 - 2020",
-    location: "New York, NY",
+    company: "Robotics Competition Team",
+    position: "Team Lead & Engineer",
+    period: "2021 - 2022",
+    location: "University",
     description:
-      "Created pixel-perfect, responsive websites and web applications. Worked closely with design team to implement modern UI/UX patterns.",
+      "Led team of 8 students in designing and building competition robots. Responsible for electrical systems, embedded programming, and mechanical integration.",
     achievements: [
-      "Delivered 20+ client websites with 100% satisfaction rate",
-      "Reduced development time by 40% through reusable component library",
-      "Trained team members on modern frontend best practices",
+      "Won 2nd place in regional robotics competition with custom-built robot",
+      "Designed power distribution and motor control PCBs for competition robot",
+      "Implemented autonomous navigation using sensor fusion and PID control",
     ],
-    technologies: ["React", "JavaScript", "Sass", "Webpack", "Git"],
+    technologies: ["Arduino", "CAD", "PCB Design", "C/C++", "3D Printing"],
   },
 ]
 
@@ -61,9 +61,9 @@ export function ExperienceSection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Work Experience</h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">Experience</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            My professional journey and key accomplishments
+            Robotics, hardware design, and software development experience
           </p>
         </motion.div>
 

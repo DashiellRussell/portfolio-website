@@ -1,29 +1,29 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { Code2, Palette, Rocket, Users } from "lucide-react"
+import { Code2, Cpu, CircuitBoard, Rocket } from "lucide-react"
 import { motion } from "framer-motion"
 
 const features = [
   {
     icon: Code2,
-    title: "Clean Code",
-    description: "Writing maintainable, scalable code following best practices and design patterns.",
+    title: "Software Development",
+    description: "Full-stack web development with React, Next.js, and modern JavaScript frameworks.",
   },
   {
-    icon: Palette,
-    title: "UI/UX Design",
-    description: "Creating intuitive interfaces with attention to detail and user experience.",
+    icon: CircuitBoard,
+    title: "PCB Design",
+    description: "Custom circuit board design and embedded systems for robotics and IoT projects.",
+  },
+  {
+    icon: Cpu,
+    title: "Robotics & Automation",
+    description: "Building intelligent systems that combine mechanical, electrical, and software engineering.",
   },
   {
     icon: Rocket,
-    title: "Performance",
-    description: "Optimizing applications for speed, efficiency, and seamless user interactions.",
-  },
-  {
-    icon: Users,
-    title: "Collaboration",
-    description: "Working effectively with teams to deliver projects on time and exceed expectations.",
+    title: "Innovation",
+    description: "Rapidly prototyping ideas from concept to reality, bridging hardware and software.",
   },
 ]
 
@@ -40,7 +40,7 @@ export function AboutSection() {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">About Me</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Passionate about creating digital experiences that make a difference
+            Engineering innovative solutions across hardware and software domains
           </p>
         </motion.div>
 
@@ -63,23 +63,23 @@ export function AboutSection() {
             transition={{ duration: 0.5 }}
             className="space-y-6"
           >
-            <h3 className="text-3xl font-bold">Crafting Digital Solutions</h3>
+            <h3 className="text-3xl font-bold">Building at the Intersection of Hardware & Software</h3>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                With over 5 years of experience in web development, I've had the privilege of working with startups and
-                established companies to bring their visions to life. My journey began with a curiosity about how
-                websites work, which evolved into a passion for creating seamless digital experiences.
+                As a Mechatronics Engineering student with a passion for Physics, I've developed a unique skill set that
+                spans both the physical and digital worlds. My journey began with taking apart gadgets to understand how
+                they work, which evolved into designing PCBs, building robots, and developing the software that brings
+                them to life.
               </p>
               <p>
-                I specialize in modern JavaScript frameworks, particularly React and Next.js, and I'm constantly
-                exploring new technologies to stay at the forefront of web development. My approach combines technical
-                expertise with creative problem-solving to deliver solutions that not only work flawlessly but also
-                delight users.
+                I specialize in creating intelligent systems that require both hardware expertise and software finesse.
+                Whether it's designing custom circuit boards, programming microcontrollers, or building full-stack web
+                applications with React and Next.js, I thrive on projects that challenge me to think across disciplines.
               </p>
               <p>
-                When I'm not coding, you'll find me contributing to open-source projects, writing technical articles, or
-                mentoring aspiring developers. I believe in continuous learning and sharing knowledge with the
-                community.
+                When I'm not in the lab or coding, you'll find me exploring new technologies, working on robotics
+                competitions, or prototyping ideas that merge the physical and digital. I believe the most innovative
+                solutions come from understanding both hardware constraints and software possibilities.
               </p>
             </div>
           </motion.div>
