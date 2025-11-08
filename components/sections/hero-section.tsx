@@ -8,7 +8,9 @@ export function HeroSection() {
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/10" />
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
 
       <div className="container relative z-10 mx-auto max-w-6xl">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -105,8 +107,9 @@ export function HeroSection() {
           >
             <div className="relative aspect-square max-w-lg mx-auto">
               {/* Decorative elements */}
-              <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl" />
-              <div className="relative rounded-2xl overflow-hidden border-4 border-primary/20 shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-primary opacity-30 rounded-full blur-2xl" />
+              <div className="relative rounded-2xl overflow-hidden border-4 border-primary/30 shadow-2xl shadow-primary/20">
                 <img src="/profile-pic.jpeg" alt="Dashiell Russell" className="w-full h-full object-cover" />
               </div>
               {/* Floating badge */}
@@ -114,10 +117,10 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1, duration: 0.5 }}
-                className="absolute -bottom-6 -right-6 bg-card border shadow-lg rounded-2xl p-4"
+                className="absolute -bottom-6 -right-6 bg-card border border-primary/20 shadow-lg shadow-primary/10 rounded-2xl p-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                     <span className="text-2xl">🚀</span>
                   </div>
                   <div>

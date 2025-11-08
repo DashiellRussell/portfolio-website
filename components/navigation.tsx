@@ -45,8 +45,8 @@ export function Navigation() {
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link href="#home" className="flex items-center space-x-2">
-            <div className="text-2xl font-bold gradient-text">DR</div>
+          <Link href="#home" className="flex items-center space-x-2 group">
+            <div className="text-2xl font-bold gradient-text group-hover:scale-110 transition-transform">DR</div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -55,9 +55,10 @@ export function Navigation() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors rounded-md hover:bg-muted"
+                className="px-4 py-2 text-sm font-medium text-foreground/80 hover:text-primary transition-all rounded-md hover:bg-primary/5 relative group"
               >
                 {item.name}
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-3/4 transition-all" />
               </Link>
             ))}
           </div>
@@ -65,14 +66,14 @@ export function Navigation() {
           {/* Right Side Actions */}
           <div className="hidden lg:flex items-center space-x-2">
             {socialLinks.map((social) => (
-              <Button key={social.label} variant="ghost" size="icon" asChild className="h-9 w-9">
+              <Button key={social.label} variant="ghost" size="icon" asChild className="h-9 w-9 hover:text-primary hover:bg-primary/10">
                 <a href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label}>
                   <social.icon className="h-4 w-4" />
                 </a>
               </Button>
             ))}
             <ThemeToggle />
-            <Button size="sm" className="ml-2">
+            <Button size="sm" className="ml-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
               <Download className="h-4 w-4 mr-2" />
               Resume
             </Button>

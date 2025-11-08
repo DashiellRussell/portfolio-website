@@ -87,8 +87,8 @@ export function SkillsSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
             >
-              <Card className="p-6 h-full">
-                <h3 className="text-xl font-semibold mb-6">{category.category}</h3>
+              <Card className="p-6 h-full hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all">
+                <h3 className="text-xl font-semibold mb-6 text-primary">{category.category}</h3>
                 <div className="space-y-4">
                   {category.skills.map((skill, skillIndex) => (
                     <div key={skill.name}>
@@ -102,7 +102,7 @@ export function SkillsSection() {
                           whileInView={{ width: `${skill.level}%` }}
                           viewport={{ once: true }}
                           transition={{ duration: 1, delay: categoryIndex * 0.1 + skillIndex * 0.1 }}
-                          className="h-full bg-primary rounded-full"
+                          className="h-full bg-gradient-to-r from-primary to-accent rounded-full shadow-sm shadow-primary/30"
                         />
                       </div>
                     </div>
@@ -131,7 +131,7 @@ export function SkillsSection() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.3, delay: index * 0.03 }}
               >
-                <Badge variant="secondary" className="px-4 py-2 text-sm">
+                <Badge variant="secondary" className="px-4 py-2 text-sm hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-default">
                   {tech}
                 </Badge>
               </motion.div>

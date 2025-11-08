@@ -95,19 +95,20 @@ export function ProjectsSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+              <Card className="overflow-hidden hover:shadow-xl hover:shadow-primary/10 transition-all hover:border-primary/30 group">
                 <div className={`grid ${project.featured ? "md:grid-cols-2" : "md:grid-cols-5"} gap-0`}>
                   {/* Image */}
                   <div className={project.featured ? "md:col-span-1" : "md:col-span-2"}>
-                    <div className="relative aspect-video md:aspect-square h-full">
+                    <div className="relative aspect-video md:aspect-square h-full overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
                       <img
                         src={project.image || "/placeholder.svg"}
                         alt={project.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
                       {project.featured && (
-                        <div className="absolute top-4 right-4">
-                          <Badge className="bg-primary text-primary-foreground">Featured</Badge>
+                        <div className="absolute top-4 right-4 z-20">
+                          <Badge className="bg-gradient-to-r from-primary to-accent text-white shadow-lg">Featured</Badge>
                         </div>
                       )}
                     </div>
@@ -118,11 +119,15 @@ export function ProjectsSection() {
                     className={`p-6 flex flex-col justify-between ${project.featured ? "md:col-span-1" : "md:col-span-3"}`}
                   >
                     <div>
-                      <h3 className="text-2xl font-bold mb-3">{project.title}</h3>
+                      <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">{project.title}</h3>
                       <p className="text-muted-foreground mb-4 leading-relaxed">{project.description}</p>
                       <div className="flex flex-wrap gap-2 mb-6">
-                        {project.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
+                        {project.tags.map((tag, tagIndex) => (
+                          <Badge
+                            key={tag}
+                            variant="secondary"
+                            className="hover:bg-primary/20 hover:text-primary hover:border-primary/30 transition-colors"
+                          >
                             {tag}
                           </Badge>
                         ))}
