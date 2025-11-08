@@ -65,22 +65,9 @@ export function AboutSection() {
           >
             <h3 className="text-3xl font-bold">Building at the Intersection of Hardware & Software</h3>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
-              <p>
-                As a Mechatronics Engineering student with a passion for Physics, I've developed a unique skill set that
-                spans both the physical and digital worlds. My journey began with taking apart gadgets to understand how
-                they work, which evolved into designing PCBs, building robots, and developing the software that brings
-                them to life.
-              </p>
-              <p>
-                I specialize in creating intelligent systems that require both hardware expertise and software finesse.
-                Whether it's designing custom circuit boards, programming microcontrollers, or building full-stack web
-                applications with React and Next.js, I thrive on projects that challenge me to think across disciplines.
-              </p>
-              <p>
-                When I'm not in the lab or coding, you'll find me exploring new technologies, working on robotics
-                competitions, or prototyping ideas that merge the physical and digital. I believe the most innovative
-                solutions come from understanding both hardware constraints and software possibilities.
-              </p>
+              <p> I’m studying Mechatronics Engineering and Physics, combining a passion for building things with a curiosity for how they work. What started with taking apart gadgets has grown into designing PCBs, developing robots, and writing the software that brings them to life. </p> 
+              <p> My work focuses on creating intelligent systems that bridge hardware and software. From custom circuit design and microcontroller programming to full-stack web applications built with React and Next.js. I enjoy projects that challenge me to think across disciplines and connect theory with real-world application. </p> 
+              <p> Outside of classes and projects, I’m often exploring new technologies, competing in robotics events, or prototyping ideas that merge engineering and physics in creative ways. </p>
             </div>
           </motion.div>
         </div>
