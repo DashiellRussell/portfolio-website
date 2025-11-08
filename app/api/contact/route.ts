@@ -54,12 +54,94 @@ export async function POST(req: Request) {
       from: EMAIL_FROM,
       to: EMAIL_TO,
       subject: `[Website] ${subject || "New message"} — ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
-      html: `<p><strong>Name:</strong> ${name}</p>
-             <p><strong>Email:</strong> ${email}</p>
-             <p><strong>Message:</strong></p>
-             <p>${String(message).replace(/\n/g, "<br/>")}</p>`,
-    }
+      text: `
+    Name: ${name}
+    Email: ${email}
+
+    ${message}
+      `.trim(),
+
+      html: `
+        <div style="
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+                      Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+          color: #1a1a1a;
+          background-color: #ffffff;
+          padding: 36px;
+          border-radius: 16px;
+          border: 1px solid rgba(75, 99, 255, 0.15);
+          box-shadow:
+            0 0 12px rgba(75, 99, 255, 0.08),
+            0 4px 24px rgba(0, 0, 0, 0.04);
+          max-width: 640px;
+          margin: auto;
+          line-height: 1.7;
+        ">
+
+          <h2 style="
+            color: #4b63ff; /* from --primary */
+            margin-bottom: 18px;
+            text-align: center;
+            font-size: 22px;
+            letter-spacing: 0.3px;
+          ">
+            ✉️ New Website Message
+          </h2>
+
+          <div style="
+            background: linear-gradient(135deg, #f9fbff, #f4f7ff);
+            border: 1px solid rgba(75, 99, 255, 0.15);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(75, 99, 255, 0.06);
+          ">
+            <p style="margin: 8px 0;">
+              <strong style="color: #0f0f11;">Name:</strong> ${name}
+            </p>
+            <p style="margin: 8px 0;">
+              <strong style="color: #0f0f11;">Email:</strong>
+              <a href="mailto:${email}" style="
+                color: #3b7cd7;
+                text-decoration: none;
+                font-weight: 500;
+              ">${email}</a>
+            </p>
+          </div>
+
+          <p style="margin: 10px 0 6px; font-weight: 600; color: #0f0f11;">Message:</p>
+          <div style="
+            background-color: #fafbfc;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: inset 0 0 12px rgba(75, 99, 255, 0.04);
+          ">
+            <p style="white-space: pre-line; margin: 0;">${String(message).replace(/\n/g, "<br/>")}</p>
+          </div>
+
+          <hr style="
+            border: none;
+            border-top: 1px solid #e5e5e5;
+            margin: 28px 0 20px;
+          " />
+
+          <p style="
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+          ">
+            Sent from your website —
+            <span style="
+              color: #4b63ff;
+              font-weight: 600;
+            ">Dashiell Russell</span>
+          </p>
+        </div>
+      `.trim(),
+    };
+
+
 
     await transporter.sendMail(mailInfo)
 

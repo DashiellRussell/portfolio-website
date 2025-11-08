@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Mail, MapPin, Phone, Send } from "lucide-react"
+import { Mail, MapPin, Phone, Send, CheckCircle, XCircle } from "lucide-react"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
 
 export function ContactSection() {
   const [formData, setFormData] = useState({
@@ -36,11 +37,17 @@ export function ContactSection() {
         throw new Error(err?.error || "Failed to send message")
       }
 
-      alert("Thank you for your message! I'll get back to you soon.")
+      toast.success("Message sent successfully!", {
+        description: "Thank you for reaching out! I'll get back to you soon.",
+        icon: <CheckCircle className="h-5 w-5" />,
+      })
       setFormData({ name: "", email: "", subject: "", message: "" })
     } catch (error) {
       console.error("Send error:", error)
-      alert("Something went wrong — please try again later.")
+      toast.error("Failed to send message", {
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again later.",
+        icon: <XCircle className="h-5 w-5" />,
+      })
     } finally {
       setIsSubmitting(false)
     }
