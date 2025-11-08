@@ -7,46 +7,75 @@ import { motion } from "framer-motion"
 
 const experiences = [
   {
-    company: "University Robotics Lab",
-    position: "Robotics Research Assistant",
-    period: "2023 - Present",
-    location: "University Campus",
+    company: "Coming Soon",
+    position: "Exciting New Opportunity",
+    period: "2025",
+    location: "TBA",
     description:
-      "Working on autonomous navigation systems and embedded control algorithms. Designing custom PCBs for sensor integration and motor control in research robots.",
+      "Something exciting is in the works! Stay tuned for updates on my next venture in engineering and technology.",
     achievements: [
-      "Designed and manufactured 3+ custom PCBs for robotics research projects",
-      "Implemented sensor fusion algorithms achieving 95% accuracy in object detection",
-      "Published research paper on autonomous navigation systems",
+      "Details to be announced soon...",
+      "Watch this space for major developments",
+      "Big things are coming!",
     ],
-    technologies: ["ROS", "PCB Design", "C++", "Python", "KiCAD", "Arduino"],
+    technologies: ["Innovation", "Engineering", "Technology", "Growth"],
+    comingSoon: true,
   },
   {
-    company: "Tech Startup",
-    position: "Full-Stack Developer & Hardware Engineer",
-    period: "2022 - 2023",
+    company: "Freelance",
+    position: "Software Developer",
+    period: "2024 - Present",
     location: "Remote",
     description:
-      "Developed IoT solutions combining custom hardware design with web applications. Built end-to-end products from PCB design to cloud-based dashboards.",
+      "Building custom web applications and e-commerce solutions for clients. Specializing in Next.js, React, and TypeScript development with focus on performance and user experience.",
     achievements: [
-      "Created 5+ IoT products with custom PCB designs and web interfaces",
-      "Reduced production costs by 40% through optimized circuit design",
-      "Built real-time data monitoring dashboard serving 10K+ devices",
+      "Delivered 5+ production websites including e-commerce platforms and society portals",
+      "Implemented full-stack features including payment integration and real-time dashboards",
+      "Maintained 100% client satisfaction rate with on-time project delivery",
     ],
-    technologies: ["ESP32", "Next.js", "React", "PCB Design", "MQTT", "TypeScript"],
+    technologies: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Node.js", "Supabase"],
   },
   {
-    company: "Robotics Competition Team",
-    position: "Team Lead & Engineer",
-    period: "2021 - 2022",
-    location: "University",
+    company: "UNSW Ramsoc",
+    position: "IT Director",
+    period: "2025 - Present",
+    location: "UNSW Sydney",
     description:
-      "Led team of 8 students in designing and building competition robots. Responsible for electrical systems, embedded programming, and mechanical integration.",
+      "Leading IT infrastructure and digital initiatives for UNSW Robotics and Mechatronics Society. Managing web development, event technology, and competition systems.",
     achievements: [
-      "Won 2nd place in regional robotics competition with custom-built robot",
-      "Designed power distribution and motor control PCBs for competition robot",
-      "Implemented autonomous navigation using sensor fusion and PID control",
+      "Architected and deployed society website serving 100+ members",
+      "Modenised & fixed critical infrastructure for society",
+      "Managed IT operations for team of 6+ people",
     ],
-    technologies: ["Arduino", "CAD", "PCB Design", "C/C++", "3D Printing"],
+    technologies: ["Next.js", "Supabase", "WebSockets", "React", "shadcn/ui", "PostgreSQL"],
+  },
+  {
+    company: "UNSW Ramsoc",
+    position: "IT Subcommittee Member",
+    period: "2025 - 2025",
+    location: "UNSW Sydney",
+    description:
+      "Contributed to IT projects and digital infrastructure for the Robotics and Mechatronics Society. Assisted with website development and event technology setup.",
+    achievements: [
+      "Supported development and maintenance of society digital platforms",
+      "Helped coordinate IT requirements for robotics competitions and workshops",
+      "Collaborated on improving member engagement through digital solutions",
+    ],
+    technologies: ["Next.js", "React", "TypeScript", "Git", "Web Development"],
+  },
+  {
+    company: "UNSW Rocketry",
+    position: "Avionics Engineer",
+    period: "2025 - Present",
+    location: "UNSW Sydney",
+    description:
+      "Designing and developing custom flight computers for high-powered rockets. Responsible for PCB design, sensor integration, telemetry systems, and real-time data acquisition during flight.",
+    achievements: [
+      "Designed custom flight computer PCBs with IMU, GPS, and barometric sensors",
+      "Implemented telemetry system for real-time flight data transmission",
+      "Developed embedded software for flight state detection and recovery deployment",
+    ],
+    technologies: ["PCB Design", "Altium", "C/C++", "IMU", "Telemetry", "Embedded Systems"],
   },
 ]
 
@@ -63,7 +92,7 @@ export function ExperienceSection() {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">Experience</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Robotics, hardware design, and software development experience
+            Software development, robotics, and hardware engineering roles
           </p>
         </motion.div>
 
@@ -74,7 +103,7 @@ export function ExperienceSection() {
           <div className="space-y-8">
             {experiences.map((exp, index) => (
               <motion.div
-                key={exp.company}
+                key={`${exp.company}-${exp.position}`}
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -82,13 +111,19 @@ export function ExperienceSection() {
                 className="relative"
               >
                 {/* Timeline dot */}
-                <div className="absolute left-6 top-6 w-5 h-5 rounded-full bg-primary border-4 border-background hidden md:block" />
+                <div className={`absolute left-6 top-6 w-5 h-5 rounded-full border-4 border-background hidden md:block ${
+                  exp.comingSoon ? "bg-gradient-to-r from-primary to-accent animate-pulse" : "bg-primary"
+                }`} />
 
-                <Card className="md:ml-20 p-6 hover:shadow-lg transition-shadow">
+                <Card className={`md:ml-20 p-6 hover:shadow-lg transition-shadow ${
+                  exp.comingSoon ? "border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5" : ""
+                }`}>
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
                     <div>
-                      <h3 className="text-2xl font-bold mb-1">{exp.position}</h3>
-                      <div className="flex items-center gap-2 text-primary font-semibold mb-2">
+                      <h3 className={`text-2xl font-bold mb-1 ${exp.comingSoon ? "bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" : ""}`}>
+                        {exp.position}
+                      </h3>
+                      <div className={`flex items-center gap-2 font-semibold mb-2 ${exp.comingSoon ? "text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" : "text-primary"}`}>
                         <Briefcase className="h-4 w-4" />
                         {exp.company}
                       </div>
