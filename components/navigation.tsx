@@ -73,9 +73,11 @@ export function Navigation() {
               </Button>
             ))}
             <ThemeToggle />
-            <Button size="sm" className="ml-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
-              <Download className="h-4 w-4 mr-2" />
-              Resume
+            <Button size="sm" className="ml-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90" asChild>
+              <a href="/Dashiell-Russell-Resume.pdf" target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4 mr-2" />
+                Resume
+              </a>
             </Button>
           </div>
 
@@ -111,9 +113,11 @@ export function Navigation() {
                   </Button>
                 ))}
               </div>
-              <Button className="mx-4 mt-2">
-                <Download className="h-4 w-4 mr-2" />
-                Download Resume
+              <Button className="mx-4 mt-2" asChild>
+                <a href="/Dashiell-Russell-Resume.pdf" target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Resume
+                </a>
               </Button>
             </div>
           </div>

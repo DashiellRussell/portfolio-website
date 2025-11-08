@@ -70,9 +70,11 @@ export function HeroSection() {
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="group bg-transparent">
-                <Download className="mr-2 h-4 w-4" />
-                Download CV
+              <Button size="lg" variant="outline" className="group bg-transparent" asChild>
+                <a href="/Dashiell-Russell-Resume.pdf" target="_blank" rel="noopener noreferrer">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download CV
+                </a>
               </Button>
             </motion.div>
 
