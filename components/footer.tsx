@@ -25,7 +25,7 @@ export function Footer() {
                 <Github className="h-5 w-5" />
               </a>
               <a
-                href="www.linkedin.com/in/dashiell-russell-9973482a1"
+                href="https://www.linkedin.com/in/dashiell-russell-9973482a1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-lg border hover:bg-muted flex items-center justify-center transition-colors"

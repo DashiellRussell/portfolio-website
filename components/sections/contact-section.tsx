@@ -138,7 +138,7 @@ export function ContactSection() {
                   </svg>
                 </a>
                 <a
-                  href="www.linkedin.com/in/dashiell-russell-9973482a1"
+                  href="https://www.linkedin.com/in/dashiell-russell-9973482a1"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors"
