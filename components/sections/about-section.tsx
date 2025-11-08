@@ -51,8 +51,8 @@ export function AboutSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="relative rounded-2xl overflow-hidden">
-              <img src="/modern-office-developer.png" alt="Working environment" className="w-full h-auto" />
+            <div className="relative rounded-2xl overflow-hidden max-w-2xl mx-auto aspect-[4/3]">
+              <img src="/about.jpg" alt="Working environment" className="w-full h-full object-cover" />
             </div>
           </motion.div>
 

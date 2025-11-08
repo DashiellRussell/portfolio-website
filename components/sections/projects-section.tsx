@@ -135,18 +135,32 @@ export function ProjectsSection() {
                   </div>
 
                   <div className="flex gap-2 mt-auto">
-                    <Button variant="default" size="sm" className="flex-1 text-xs h-8" asChild>
-                      <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">
+                    {project.liveUrl !== "#" ? (
+                      <Button variant="default" size="sm" className="flex-1 text-xs h-8" asChild>
+                        <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-1.5 h-3 w-3" />
+                          View
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button variant="default" size="sm" className="flex-1 text-xs h-8" disabled>
                         <ExternalLink className="mr-1.5 h-3 w-3" />
                         View
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
-                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                      </Button>
+                    )}
+                    {project.githubUrl !== "#" ? (
+                      <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
+                        <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                          <Github className="mr-1.5 h-3 w-3" />
+                          Code
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" className="flex-1 text-xs h-8" disabled>
                         <Github className="mr-1.5 h-3 w-3" />
                         Code
-                      </a>
-                    </Button>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
