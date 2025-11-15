@@ -112,7 +112,7 @@ export function HeroSection() {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
               <div className="absolute -inset-4 bg-gradient-to-r from-primary via-accent to-primary opacity-30 rounded-full blur-2xl" />
               <div className="relative w-full aspect-square rounded-2xl overflow-hidden border-4 border-primary/30 shadow-2xl shadow-primary/20">
-                <img src="/ProfilePic.jpg" alt="Dashiell Russell" className="w-full h-full object-cover object-center" />
+                <img src="/profile-pic.jpeg" alt="Dashiell Russell" className="w-full h-full object-cover object-center" />
               </div>
               {/* Floating badge */}
               <motion.div
