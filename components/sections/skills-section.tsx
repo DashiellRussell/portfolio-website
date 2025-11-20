@@ -62,7 +62,7 @@ const technologies = [
 
 export function SkillsSection() {
   return (
-    <section id="skills" className="py-20 px-4 bg-muted/30">
+    <section id="skills" className="py-20 px-4">
       <div className="container mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

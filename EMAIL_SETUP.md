@@ -35,10 +35,10 @@ Your `.env.local` should look like this:
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=dashiell.russell@gmail.com
-SMTP_PASS=abcdefghijklmnop
-EMAIL_TO=dashiell.russell@gmail.com
-EMAIL_FROM=dashiell.russell@gmail.com
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_TO=your-email@gmail.com
+EMAIL_FROM=your-email@gmail.com
 ```
 
 ## Testing the Contact Form

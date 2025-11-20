@@ -1,101 +1,76 @@
-import { Github, Instagram, Linkedin, Mail, Twitter } from "lucide-react"
+import { Github, Instagram, Linkedin, Mail } from "lucide-react"
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="border-t bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+    <footer className="relative border-t border-white/10 pt-16 pb-8 overflow-hidden bg-background/80 backdrop-blur-md">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.1),transparent_50%)]" />
+
+      <div className="container relative z-10 mx-auto px-4">
+        <div className="grid md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
-          <div className="md:col-span-2">
-            <h3 className="text-2xl font-bold mb-3">Dashiell Russell</h3>
-            <p className="text-muted-foreground mb-4 max-w-md leading-relaxed">
-              Full-Stack Developer passionate about creating beautiful, performant web experiences. Let's build
-              something amazing together.
+          <div className="md:col-span-2 space-y-6">
+            <h3 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+              Dashiell Russell
+            </h3>
+            <p className="text-muted-foreground max-w-md leading-relaxed text-lg">
+              Full-Stack Developer bridging the gap between hardware and software.
+              Crafting digital experiences that matter.
             </p>
-            <div className="flex gap-3">
-              <a
-                href="https://github.com/DashiellRussell"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 w-10 rounded-lg border hover:bg-muted flex items-center justify-center transition-colors"
-                aria-label="GitHub"
-              >
-                <Github className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.linkedin.com/in/dashiell-russell-9973482a1"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 w-10 rounded-lg border hover:bg-muted flex items-center justify-center transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/dashiell_russell/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 w-10 rounded-lg border hover:bg-muted flex items-center justify-center transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="mailto:dashiell.russell@gmail.com"
-                className="h-10 w-10 rounded-lg border hover:bg-muted flex items-center justify-center transition-colors"
-                aria-label="Email"
-              >
-                <Mail className="h-5 w-5" />
-              </a>
+            <div className="flex gap-4">
+              {[
+                { icon: Github, href: "https://github.com/DashiellRussell", label: "GitHub" },
+                { icon: Linkedin, href: "https://www.linkedin.com/in/dashiell-russell-9973482a1", label: "LinkedIn" },
+                { icon: Instagram, href: "https://www.instagram.com/dashiell_russell/", label: "Instagram" },
+                { icon: Mail, href: "mailto:dashiell.russell@gmail.com", label: "Email" }
+              ].map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-12 w-12 rounded-xl border border-white/10 bg-white/5 hover:bg-primary/20 hover:border-primary/50 hover:scale-110 hover:shadow-[0_0_15px_rgba(var(--primary),0.3)] flex items-center justify-center transition-all duration-300 group"
+                  aria-label={social.label}
+                >
+                  <social.icon className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
+                </a>
+              ))}
             </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#home" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="#skills" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Skills
-                </a>
-              </li>
-              <li>
-                <a href="#projects" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Projects
-                </a>
-              </li>
-              <li>
-                <a href="#experience" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Experience
-                </a>
-              </li>
+            <h4 className="font-semibold mb-6 text-lg text-foreground">Quick Links</h4>
+            <ul className="space-y-4">
+              {["Home", "About", "Skills", "Projects", "Experience"].map((item) => (
+                <li key={item}>
+                  <a
+                    href={`#${item.toLowerCase()}`}
+                    className="text-muted-foreground hover:text-primary hover:translate-x-1 transition-all duration-300 inline-block"
+                  >
+                    {item}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact Info */}
           <div>
-            <h4 className="font-semibold mb-4">Contact</h4>
-            <ul className="space-y-2 text-muted-foreground">
-              <li>Sydney, Au</li>
+            <h4 className="font-semibold mb-6 text-lg text-foreground">Contact</h4>
+            <ul className="space-y-4 text-muted-foreground">
+              <li className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Sydney, Australia
+              </li>
               <li>
-                <a href="mailto:dashiell.russell@gmail.com" className="hover:text-foreground transition-colors">
+                <a href="mailto:dashiell.russell@gmail.com" className="hover:text-primary transition-colors">
                   dashiell.russell@gmail.com
                 </a>
               </li>
               <li>
-                <a href="tel:+61435554607" className="hover:text-foreground transition-colors">
+                <a href="tel:+61435554607" className="hover:text-primary transition-colors">
                   +61 435-554-607
                 </a>
               </li>
@@ -104,16 +79,12 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t">
+        <div className="pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">© {currentYear} Dashiell Russell. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Terms of Service
-              </a>
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
             </div>
           </div>
         </div>
