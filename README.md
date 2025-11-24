@@ -51,15 +51,27 @@ A modern, interactive, and "Cyber-Minimalist" portfolio website built to showcas
    ```
 
 3. **Set up Environment Variables**
-   Create a `.env.local` file in the root directory and add your SMTP credentials for the contact form:
+   
+   Copy the example environment file and add your actual credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Then edit `.env.local` with your SMTP credentials for the contact form:
    ```env
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
    SMTP_USER=your-email@gmail.com
-   SMTP_PASS=your-app-password
+   SMTP_PASS="your-app-password"
    EMAIL_TO=your-email@gmail.com
    EMAIL_FROM=your-email@gmail.com
    ```
+   
+   **⚠️ Security Notes:**
+   - **Never commit `.env.local`** to version control (it's already in `.gitignore`)
+   - For Gmail, use an **App Password**, not your regular password
+   - Generate a Gmail App Password at: https://myaccount.google.com/apppasswords
+   - Keep quotes around `SMTP_PASS` if your password contains special characters
 
 4. **Run the development server**
    ```bash
