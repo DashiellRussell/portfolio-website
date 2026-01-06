@@ -1,6 +1,0 @@
-# Allow all crawlers
-User-agent: *
-Allow: /
-
-# Sitemap location (create this when you deploy)
-Sitemap: https://dashiellrussell.com/sitemap.xml

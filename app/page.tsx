@@ -1,27 +1,25 @@
-import { Navigation } from "@/components/navigation"
-import { HeroSection } from "@/components/sections/hero-section"
-import { AboutSection } from "@/components/sections/about-section"
-import { SkillsSection } from "@/components/sections/skills-section"
-import { BlogSection } from "@/components/sections/blog-section"
-import { ProjectsSection } from "@/components/sections/projects-section"
-import { ExperienceSection } from "@/components/sections/experience-section"
-import { ContactSection } from "@/components/sections/contact-section"
+import { Hero } from "@/components/hero"
+import { About } from "@/components/about"
+import { Skills } from "@/components/skills"
+import { Insights } from "@/components/insights"
+import { Projects } from "@/components/projects"
+import { Experience } from "@/components/experience"
+import { Contact } from "@/components/contact"
 import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
 
 export default function Home() {
   return (
-    <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
-      <Navigation />
-      <main className="space-y-0">
-        <HeroSection />
-        <AboutSection />
-        <SkillsSection />
-        <BlogSection />
-        <ProjectsSection />
-        <ExperienceSection />
-        <ContactSection />
-      </main>
+    <main className="min-h-screen">
+      <Header />
+      <Hero />
+      <About />
+      <Skills />
+      <Insights />
+      <Projects />
+      <Experience />
+      <Contact />
       <Footer />
-    </div>
+    </main>
   )
 }
