@@ -32,7 +32,6 @@ export const metadata: Metadata = {
   title: "Dashiell Russell - Portfolio",
   description:
     "Building The Future - Portfolio of Dashiell Russell, showcasing engineering projects and technical expertise",
-  generator: "v0.app",
   icons: {
     icon: [
       {
