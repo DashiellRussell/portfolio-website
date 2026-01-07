@@ -46,6 +46,9 @@ function Arm() {
     const pinch = Math.sin(t * 4) * 0.25 - 0.05
     if (leftFingerRef.current) leftFingerRef.current.rotation.x = pinch
     if (rightFingerRef.current) rightFingerRef.current.rotation.x = -pinch
+
+    // Passive 360 degree rotation
+    group.current.rotation.y += 0.005
   })
 
   return (
@@ -53,7 +56,7 @@ function Arm() {
       {/* Base */}
       <group ref={baseRef}>
         <mesh position={[0, 0.2, 0]} material={jointMaterial}>
-          <cylinderGeometry args={[1, 1.2, 0.4, 32]} />
+          <cylinderGeometry args={[0.6, 0.8, 0.4, 32]} />
         </mesh>
         
         {/* Turret */}
@@ -62,8 +65,8 @@ function Arm() {
         </mesh>
         
         {/* Accent Strip */}
-        <mesh position={[0, 0.7, 0.61]} material={accentMaterial}>
-          <boxGeometry args={[1.0, 0.15, 0.05]} />
+        <mesh position={[0, 0.7, 0.62]} material={accentMaterial}>
+          <boxGeometry args={[1.0, 0.15, 0.1]} />
         </mesh>
 
         {/* Lower Arm Joint */}
