@@ -153,8 +153,14 @@ function Arm({ hovered }: { hovered: boolean }) {
 }
 
 export function RobotArm() {
+  const [hovered, setHovered] = useState(false)
+
   return (
-    <div className="w-full h-full min-h-[400px] bg-muted/20 rounded-xl overflow-hidden cursor-move">
+    <div 
+      className="w-full h-full min-h-[400px] bg-muted/20 rounded-xl overflow-hidden cursor-default"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
       <Canvas>
         <PerspectiveCamera makeDefault position={[6, 6, 8]} fov={50} />
         
@@ -164,13 +170,14 @@ export function RobotArm() {
         <spotLight position={[-10, 10, 5]} angle={0.3} penumbra={1} intensity={2} color="#06b6d4" />
         
         <Float speed={2} rotationIntensity={0.1} floatIntensity={0.2}>
-          <Arm />
+          <Arm hovered={hovered} />
         </Float>
         
         <ContactShadows position={[0, -2.5, 0]} opacity={0.5} scale={20} blur={2} />
         
         <OrbitControls 
           enableZoom={false} 
+          enableRotate={false}
           minPolarAngle={Math.PI / 4} 
           maxPolarAngle={Math.PI / 1.5}
         />
