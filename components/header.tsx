@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Moon, Sun, Menu, X, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
 
 export function Header() {
   const [theme, setTheme] = useState<"light" | "dark">("light")
@@ -33,7 +34,12 @@ export function Header() {
   ]
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b-4 border-border shadow-brutal-sm">
+    <motion.header
+      className="fixed top-0 left-0 right-0 z-50 bg-background border-b-4 border-border shadow-brutal-sm"
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, ease: "circOut" }}
+    >
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <a href="/#home" className="text-2xl font-bold tracking-tight uppercase">
@@ -93,6 +99,6 @@ export function Header() {
           </div>
         )}
       </nav>
-    </header>
+    </motion.header>
   )
 }

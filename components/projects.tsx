@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { ChevronLeft, ChevronRight, ExternalLink, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { motion, AnimatePresence } from "framer-motion"
+import { FadeIn } from "@/components/ui/motion-wrapper"
 
 export function Projects() {
   const [currentProject, setCurrentProject] = useState(0)
@@ -71,84 +73,98 @@ export function Projects() {
   const project = projects[currentProject]
 
   return (
-    <section id="projects" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/50">
+    <section id="projects" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/50 overflow-hidden">
       <div className="container mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold mb-4 uppercase tracking-tight">Featured Projects</h2>
-          <p className="text-xl text-foreground/70 font-medium">
-            A selection of my recent work in robotics, web development, and hardware engineering.
-          </p>
-        </div>
+        <FadeIn>
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-4 uppercase tracking-tight">Featured Projects</h2>
+            <p className="text-xl text-foreground/70 font-medium">
+              A selection of my recent work in robotics, web development, and hardware engineering.
+            </p>
+          </div>
+        </FadeIn>
 
         <div className="max-w-5xl mx-auto">
-          <div className="bg-card border-4 border-border overflow-hidden shadow-brutal-lg min-h-[600px] flex flex-col">
-            {project.status && (
-              <div className="bg-accent text-accent-foreground px-4 py-2 text-sm font-bold uppercase tracking-wide border-b-4 border-border">
-                {project.status}
-              </div>
-            )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentProject}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.4, ease: "circOut" }}
+              className="bg-card border-4 border-border overflow-hidden shadow-brutal-lg min-h-[600px] flex flex-col"
+            >
+              {project.status && (
+                <div className="bg-accent text-accent-foreground px-4 py-2 text-sm font-bold uppercase tracking-wide border-b-4 border-border">
+                  {project.status}
+                </div>
+              )}
 
-            <div className="aspect-video bg-muted relative border-b-4 border-border">
-              <img
-                src={project.image || "/placeholder.svg"}
-                alt={project.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="p-8 space-y-6 flex-1 flex flex-col">
-              <div className="min-h-[200px] flex flex-col">
-                <h3 className="text-4xl font-bold text-foreground mb-4 uppercase tracking-tight">{project.title}</h3>
-                <p className="text-lg text-foreground/70 leading-relaxed font-medium">{project.description}</p>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                {project.tags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-4 py-2 bg-accent text-accent-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm"
-                  >
-                    {tag}
-                  </span>
-                ))}
+              <div className="aspect-video bg-muted relative border-b-4 border-border overflow-hidden">
+                <motion.img
+                  src={project.image || "/placeholder.svg"}
+                  alt={project.title}
+                  className="w-full h-full object-cover"
+                  initial={{ scale: 1.1 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                />
               </div>
 
-              <div className="flex gap-4 pt-4">
-                {project.liveUrl ? (
-                  <a
-                    href={project.liveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:underline flex items-center gap-2 font-bold uppercase tracking-wide"
-                  >
-                    <ExternalLink className="h-5 w-5" />
-                    View Project
-                  </a>
-                ) : (
-                  <span className="text-foreground/50 flex items-center gap-2 font-bold uppercase tracking-wide">
-                    <ExternalLink className="h-5 w-5" />
-                    Coming Soon
-                  </span>
-                )}
-                {project.codeUrl ? (
-                  <a
-                    href={project.codeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:underline flex items-center gap-2 font-bold uppercase tracking-wide"
-                  >
-                    <Github className="h-5 w-5" />
-                    View Code
-                  </a>
-                ) : (
-                  <span className="text-foreground/50 flex items-center gap-2 font-bold uppercase tracking-wide">
-                    <Github className="h-5 w-5" />
-                    Private
-                  </span>
-                )}
+              <div className="p-8 space-y-6 flex-1 flex flex-col">
+                <div className="min-h-[200px] flex flex-col">
+                  <h3 className="text-4xl font-bold text-foreground mb-4 uppercase tracking-tight">{project.title}</h3>
+                  <p className="text-lg text-foreground/70 leading-relaxed font-medium">{project.description}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {project.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-4 py-2 bg-accent text-accent-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  {project.liveUrl ? (
+                    <a
+                      href={project.liveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline flex items-center gap-2 font-bold uppercase tracking-wide"
+                    >
+                      <ExternalLink className="h-5 w-5" />
+                      View Project
+                    </a>
+                  ) : (
+                    <span className="text-foreground/50 flex items-center gap-2 font-bold uppercase tracking-wide">
+                      <ExternalLink className="h-5 w-5" />
+                      Coming Soon
+                    </span>
+                  )}
+                  {project.codeUrl ? (
+                    <a
+                      href={project.codeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline flex items-center gap-2 font-bold uppercase tracking-wide"
+                    >
+                      <Github className="h-5 w-5" />
+                      View Code
+                    </a>
+                  ) : (
+                    <span className="text-foreground/50 flex items-center gap-2 font-bold uppercase tracking-wide">
+                      <Github className="h-5 w-5" />
+                      Private
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
 
           <div className="flex items-center justify-between mt-8">
             <Button variant="outline" size="icon" onClick={prevProject}>
