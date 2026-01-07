@@ -29,15 +29,16 @@ function Arm() {
     const targetBaseRot = (state.mouse.x * Math.PI) / 3 // +/- 60 degrees
     const targetLowerArmRot = 0.2 + (state.mouse.y * Math.PI) / 6 // Base offset + tracking
     const targetUpperArmRot = -1 - (state.mouse.y * Math.PI) / 6 // Counter-movement for realism
+    // Claw tracks mouse Y (Up/Down) + subtle breathing
+    const targetClawRot = 0.5 + (state.mouse.y * Math.PI) / 3 + Math.sin(t * 2) * 0.05
 
     // Smoothly interpolate towards targets
     baseRef.current.rotation.y = THREE.MathUtils.lerp(baseRef.current.rotation.y, targetBaseRot, 0.1)
     lowerArmRef.current.rotation.z = THREE.MathUtils.lerp(lowerArmRef.current.rotation.z, targetLowerArmRot, 0.1)
     upperArmRef.current.rotation.z = THREE.MathUtils.lerp(upperArmRef.current.rotation.z, targetUpperArmRot, 0.1)
+    clawRef.current.rotation.z = THREE.MathUtils.lerp(clawRef.current.rotation.z, targetClawRot, 0.1)
 
-    // Independent "Liveliness" Animations for Claw
-    // Waving claw
-    clawRef.current.rotation.z = Math.sin(t * 3) * 0.3 + 0.5
+    // Independent "Liveliness" Animations
     
     // Pinching grippers (rotated 90 degrees to rotate around X axis)
     // Range: [-0.3, 0.2] - Negative opens wide, Positive closes gently
