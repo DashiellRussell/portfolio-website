@@ -8,22 +8,19 @@ export function Preloader() {
 
   useEffect(() => {
     // Prevent scrolling while loading
-    if (isLoading) {
-      document.body.style.overflow = "hidden"
-    } else {
-      document.body.style.overflow = "auto"
-    }
+    document.body.style.overflow = "hidden"
 
     // Simulate loading time or wait for window.load
     const timer = setTimeout(() => {
       setIsLoading(false)
+      document.body.style.overflow = "auto"
     }, 2000)
 
     return () => {
       clearTimeout(timer)
       document.body.style.overflow = "auto"
     }
-  }, [isLoading])
+  }, [])
 
   return (
     <AnimatePresence>

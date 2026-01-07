@@ -34,6 +34,13 @@ export function Skills() {
     },
   ]
 
+  const technologies = [
+    "React", "Next.js", "TypeScript", "Python", "C/C++", "Arduino", "ESP32",
+    "Raspberry Pi", "PCB Design", "KiCAD", "EasyEDA", "Fusion 360", "SolidWorks",
+    "Git", "Node.js", "PostgreSQL", "Supabase", "WebSockets", "REST APIs",
+    "Linux", "IoT", "Sensors", "3D Printing", "Docker", "n8n", "Caddy"
+  ]
+
   return (
     <section id="skills" className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="container mx-auto">
@@ -44,7 +51,7 @@ export function Skills() {
           </div>
         </FadeIn>
 
-        <FadeInStagger className="max-w-4xl mx-auto space-y-12">
+        <FadeInStagger className="max-w-4xl mx-auto space-y-12 mb-20">
           {skillCategories.map((category, idx) => (
             <FadeInItem key={idx} className="space-y-6">
               <h3 className="text-3xl font-bold text-foreground mb-6 uppercase tracking-wide">{category.category}</h3>
@@ -74,48 +81,31 @@ export function Skills() {
         </FadeInStagger>
 
         <FadeIn delay={0.2}>
-          <div className="mt-16 text-center">
+          <div className="text-center">
             <h3 className="text-2xl font-bold mb-8 uppercase tracking-wide">Technologies I Work With</h3>
-            <FadeInStagger className="flex flex-wrap justify-center gap-3">
-              {[
-                "React",
-                "Next.js",
-                "TypeScript",
-                "Python",
-                "C/C++",
-                "Arduino",
-                "ESP32",
-                "Raspberry Pi",
-                "PCB Design",
-                "KiCAD",
-                "EasyEDA",
-                "Fusion 360",
-                "SolidWorks",
-                "Git",
-                "Node.js",
-                "PostgreSQL",
-                "Supabase",
-                "WebSockets",
-                "REST APIs",
-                "Linux",
-                "IoT",
-                "Sensors",
-                "3D Printing",
-                "Docker",
-                "n8n",
-                "Caddy",
-              ].map((tech, idx) => (
-                <FadeInItem key={idx}>
-                  <motion.div
-                    className="px-4 py-2 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm cursor-default"
-                    whileHover={{ scale: 1.1, rotate: Math.random() * 4 - 2 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            <div className="relative flex overflow-hidden py-4 bg-background border-y-4 border-border">
+              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-10" />
+              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-10" />
+              
+              <motion.div
+                className="flex gap-4 flex-nowrap whitespace-nowrap"
+                animate={{ x: "-50%" }}
+                transition={{
+                  repeat: Infinity,
+                  ease: "linear",
+                  duration: 20, // Adjust speed here
+                }}
+              >
+                {[...technologies, ...technologies].map((tech, idx) => (
+                  <div
+                    key={idx}
+                    className="inline-block px-6 py-3 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm flex-shrink-0"
                   >
                     {tech}
-                  </motion.div>
-                </FadeInItem>
-              ))}
-            </FadeInStagger>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
           </div>
         </FadeIn>
       </div>
