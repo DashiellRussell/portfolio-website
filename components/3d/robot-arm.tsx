@@ -87,8 +87,8 @@ function Arm() {
         </mesh>
         
         {/* Accent Strip */}
-        <mesh position={[0, 0.7, 0.62]} material={accentMaterial}>
-          <boxGeometry args={[1.0, 0.15, 0.1]} />
+        <mesh position={[0, 0.7, 0.62]} rotation={[0, 0, Math.PI / 2]} material={accentMaterial}>
+          <boxGeometry args={[0.5, 0.15, 0.1]} />
         </mesh>
 
         {/* Lower Arm Joint */}
