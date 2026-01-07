@@ -5,7 +5,7 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { PerspectiveCamera, Environment, ContactShadows, Float, OrbitControls, Grid } from "@react-three/drei"
 import * as THREE from "three"
 
-function Arm() {
+function Arm({ hovered }: { hovered: boolean }) {
   const group = useRef<THREE.Group>(null)
   const baseRef = useRef<THREE.Group>(null)
   const lowerArmRef = useRef<THREE.Group>(null)
@@ -13,7 +13,6 @@ function Arm() {
   const clawRef = useRef<THREE.Group>(null)
   const leftFingerRef = useRef<THREE.Mesh>(null)
   const rightFingerRef = useRef<THREE.Mesh>(null)
-  const [hovered, setHovered] = useState(false)
 
   // Materials
   const mainMaterial = new THREE.MeshStandardMaterial({ color: "#f3f4f6", roughness: 0.3, metalness: 0.8 })
@@ -72,8 +71,6 @@ function Arm() {
       position={[0, -2, 0]} 
       scale={0.7} 
       rotation={[0, -Math.PI / 4, 0]}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
     >
       {/* Base */}
       <group ref={baseRef}>
