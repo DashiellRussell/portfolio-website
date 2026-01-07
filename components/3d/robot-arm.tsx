@@ -11,6 +11,8 @@ function Arm() {
   const lowerArmRef = useRef<THREE.Group>(null)
   const upperArmRef = useRef<THREE.Group>(null)
   const clawRef = useRef<THREE.Group>(null)
+  const leftFingerRef = useRef<THREE.Mesh>(null)
+  const rightFingerRef = useRef<THREE.Mesh>(null)
 
   // Materials
   const mainMaterial = new THREE.MeshStandardMaterial({ color: "#f3f4f6", roughness: 0.3, metalness: 0.8 })
@@ -18,16 +20,23 @@ function Arm() {
   const jointMaterial = new THREE.MeshStandardMaterial({ color: "#18181b", roughness: 0.8, metalness: 0.2 })
   
   useFrame((state) => {
-    if (!baseRef.current || !lowerArmRef.current || !upperArmRef.current || !clawRef.current) return
+    if (!baseRef.current || !lowerArmRef.current || !upperArmRef.current || !clawRef.current || !leftFingerRef.current || !rightFingerRef.current) return
 
     // Smooth animation based on time instead of just mouse for visibility
     const t = state.clock.getElapsedTime()
     
-    // Gentle idle animation
-    baseRef.current.rotation.y = Math.sin(t * 0.5) * 0.3
-    lowerArmRef.current.rotation.z = Math.sin(t * 0.3) * 0.2 + 0.2
-    upperArmRef.current.rotation.z = Math.cos(t * 0.3) * 0.2 - 1
-    clawRef.current.rotation.z = Math.sin(t * 0.5) * 0.1 + 0.5
+    // Active "Wave" animation
+    baseRef.current.rotation.y = Math.sin(t * 0.8) * 0.5 // Sweeping left/right
+    lowerArmRef.current.rotation.z = Math.sin(t * 0.5) * 0.1 + 0.2
+    upperArmRef.current.rotation.z = Math.cos(t * 0.5) * 0.1 - 1
+    
+    // Rapid waving of the claw
+    clawRef.current.rotation.z = Math.sin(t * 3) * 0.3 + 0.5
+    
+    // Grippers pinching
+    const pinch = (Math.sin(t * 4) + 1) * 0.15
+    leftFingerRef.current.rotation.z = 0.1 + pinch
+    rightFingerRef.current.rotation.z = -0.1 - pinch
     
     // Interactive mouse influence (subtle)
     const mouseX = (state.mouse.x * Math.PI) / 6
@@ -90,12 +99,12 @@ function Arm() {
                  </mesh>
                  
                  {/* Left Finger */}
-                 <mesh position={[-0.3, 0.8, 0]} rotation={[0, 0, 0.2]} material={mainMaterial}>
+                 <mesh ref={leftFingerRef} position={[-0.3, 0.8, 0]} rotation={[0, 0, 0.2]} material={mainMaterial}>
                     <boxGeometry args={[0.15, 1, 0.4]} />
                  </mesh>
                  
                  {/* Right Finger */}
-                 <mesh position={[0.3, 0.8, 0]} rotation={[0, 0, -0.2]} material={mainMaterial}>
+                 <mesh ref={rightFingerRef} position={[0.3, 0.8, 0]} rotation={[0, 0, -0.2]} material={mainMaterial}>
                     <boxGeometry args={[0.15, 1, 0.4]} />
                  </mesh>
               </group>
@@ -111,7 +120,7 @@ export function RobotArm() {
   return (
     <div className="w-full h-full min-h-[400px] bg-muted/20 rounded-xl overflow-hidden cursor-move">
       <Canvas>
-        <PerspectiveCamera makeDefault position={[8, 8, 10]} fov={50} />
+        <PerspectiveCamera makeDefault position={[6, 6, 8]} fov={50} />
         
         {/* High intensity lighting to ensure visibility */}
         <ambientLight intensity={1.5} />
