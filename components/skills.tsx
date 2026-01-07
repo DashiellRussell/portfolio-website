@@ -34,11 +34,16 @@ export function Skills() {
     },
   ]
 
-  const technologies = [
-    "React", "Next.js", "TypeScript", "Python", "C/C++", "Arduino", "ESP32",
-    "Raspberry Pi", "PCB Design", "KiCAD", "EasyEDA", "Fusion 360", "SolidWorks",
-    "Git", "Node.js", "PostgreSQL", "Supabase", "WebSockets", "REST APIs",
-    "Linux", "IoT", "Sensors", "3D Printing", "Docker", "n8n", "Caddy"
+  const techRow1 = [
+    "React", "Next.js", "TypeScript", "Python", "C/C++", "Git", "Node.js", "PostgreSQL", "Supabase"
+  ]
+  
+  const techRow2 = [
+    "Arduino", "ESP32", "Raspberry Pi", "PCB Design", "KiCAD", "EasyEDA", "Fusion 360", "SolidWorks"
+  ]
+  
+  const techRow3 = [
+    "WebSockets", "REST APIs", "Linux", "IoT", "Sensors", "3D Printing", "Docker", "n8n", "Caddy"
   ]
 
   return (
@@ -83,28 +88,76 @@ export function Skills() {
         <FadeIn delay={0.2}>
           <div className="text-center">
             <h3 className="text-2xl font-bold mb-8 uppercase tracking-wide">Technologies I Work With</h3>
-            <div className="relative flex overflow-hidden py-4 bg-background border-y-4 border-border">
-              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-10" />
-              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-10" />
+            <div className="relative flex flex-col bg-background border-t-4 border-border">
+              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
               
-              <motion.div
-                className="flex gap-4 flex-nowrap whitespace-nowrap"
-                animate={{ x: "-50%" }}
-                transition={{
-                  repeat: Infinity,
-                  ease: "linear",
-                  duration: 20, // Adjust speed here
-                }}
-              >
-                {[...technologies, ...technologies].map((tech, idx) => (
-                  <div
-                    key={idx}
-                    className="inline-block px-6 py-3 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm flex-shrink-0"
-                  >
-                    {tech}
-                  </div>
-                ))}
-              </motion.div>
+              {/* Row 1 - Left */}
+              <div className="overflow-hidden py-4 border-b-4 border-border flex">
+                <motion.div
+                  className="flex gap-4 flex-nowrap whitespace-nowrap"
+                  animate={{ x: "-50%" }}
+                  transition={{
+                    repeat: Infinity,
+                    ease: "linear",
+                    duration: 30,
+                  }}
+                >
+                  {[...techRow1, ...techRow1, ...techRow1, ...techRow1].map((tech, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-block px-6 py-3 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm flex-shrink-0"
+                    >
+                      {tech}
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+
+              {/* Row 2 - Right */}
+              <div className="overflow-hidden py-4 border-b-4 border-border flex">
+                <motion.div
+                  className="flex gap-4 flex-nowrap whitespace-nowrap"
+                  initial={{ x: "-50%" }}
+                  animate={{ x: "0%" }}
+                  transition={{
+                    repeat: Infinity,
+                    ease: "linear",
+                    duration: 35,
+                  }}
+                >
+                  {[...techRow2, ...techRow2, ...techRow2, ...techRow2].map((tech, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-block px-6 py-3 bg-accent text-accent-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm flex-shrink-0"
+                    >
+                      {tech}
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+
+              {/* Row 3 - Left */}
+              <div className="overflow-hidden py-4 border-b-4 border-border flex">
+                <motion.div
+                  className="flex gap-4 flex-nowrap whitespace-nowrap"
+                  animate={{ x: "-50%" }}
+                  transition={{
+                    repeat: Infinity,
+                    ease: "linear",
+                    duration: 40,
+                  }}
+                >
+                  {[...techRow3, ...techRow3, ...techRow3, ...techRow3].map((tech, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-block px-6 py-3 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm flex-shrink-0"
+                    >
+                      {tech}
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
             </div>
           </div>
         </FadeIn>
