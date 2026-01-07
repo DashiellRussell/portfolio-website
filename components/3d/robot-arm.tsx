@@ -54,13 +54,13 @@ function Arm() {
         </mesh>
         
         {/* Turret */}
-        <mesh position={[0, 0.8, 0]} material={mainMaterial}>
-          <boxGeometry args={[1.5, 1, 1.5]} />
+        <mesh position={[0, 0.7, 0]} material={mainMaterial}>
+          <boxGeometry args={[1.2, 0.6, 1.2]} />
         </mesh>
         
         {/* Accent Strip */}
-        <mesh position={[0, 0.8, 0.76]} material={accentMaterial}>
-          <boxGeometry args={[1.2, 0.2, 0.05]} />
+        <mesh position={[0, 0.7, 0.61]} material={accentMaterial}>
+          <boxGeometry args={[1.0, 0.15, 0.05]} />
         </mesh>
 
         {/* Lower Arm Joint */}
