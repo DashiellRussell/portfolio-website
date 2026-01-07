@@ -38,7 +38,7 @@ export function Header() {
       className="fixed top-0 left-0 right-0 z-50 bg-background border-b-4 border-border shadow-brutal-sm"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.5, ease: "circOut" }}
+      transition={{ duration: 0.5, ease: "circOut", delay: 2.2 }}
     >
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">

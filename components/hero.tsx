@@ -15,7 +15,7 @@ export function Hero() {
     <section id="hero" className="pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="container mx-auto">
         <div className="max-w-6xl mx-auto">
-          <FadeInStagger>
+          <FadeInStagger delay={2.2}>
             <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
               <div className="space-y-8 flex-1 order-2 md:order-1">
                 <FadeInItem>
@@ -67,7 +67,7 @@ export function Hero() {
             </div>
           </FadeInStagger>
 
-          <FadeIn delay={0.4}>
+          <FadeIn delay={2.6}>
             <div className="flex flex-wrap gap-3 pt-12 max-w-6xl mx-auto">
               <span className="px-4 py-2 bg-card text-foreground text-sm font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm hover:-translate-y-1 transition-transform cursor-default">
                 Full-Stack Development

@@ -25,11 +25,12 @@ export const fadeInVariants: Variants = {
 
 export const staggerContainerVariants: Variants = {
   hidden: {},
-  visible: {
+  visible: (custom = {}) => ({
     transition: {
       staggerChildren: 0.1,
+      delayChildren: custom.delay || 0,
     },
-  },
+  }),
 }
 
 export const slideInFromLeftVariants: Variants = {
@@ -74,13 +75,14 @@ export function FadeIn({ children, delay = 0, duration = 0.6, className, ...prop
   )
 }
 
-export function FadeInStagger({ children, className, ...props }: MotionProps) {
+export function FadeInStagger({ children, delay = 0, className, ...props }: MotionProps) {
   return (
     <motion.div
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-50px" }}
       variants={staggerContainerVariants}
+      custom={{ delay }}
       className={className}
       {...props}
     >
