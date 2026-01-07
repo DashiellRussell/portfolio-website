@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { PerspectiveCamera, Environment, ContactShadows, Float, OrbitControls, Grid } from "@react-three/drei"
 import * as THREE from "three"
@@ -13,6 +13,7 @@ function Arm() {
   const clawRef = useRef<THREE.Group>(null)
   const leftFingerRef = useRef<THREE.Mesh>(null)
   const rightFingerRef = useRef<THREE.Mesh>(null)
+  const [hovered, setHovered] = useState(false)
 
   // Materials
   const mainMaterial = new THREE.MeshStandardMaterial({ color: "#f3f4f6", roughness: 0.3, metalness: 0.8 })
@@ -20,18 +21,35 @@ function Arm() {
   const jointMaterial = new THREE.MeshStandardMaterial({ color: "#18181b", roughness: 0.8, metalness: 0.2 })
   
   useFrame((state) => {
-    if (!baseRef.current || !lowerArmRef.current || !upperArmRef.current || !clawRef.current || !leftFingerRef.current || !rightFingerRef.current) return
+    if (!baseRef.current || !lowerArmRef.current || !upperArmRef.current || !clawRef.current || !leftFingerRef.current || !rightFingerRef.current || !group.current) return
 
     const t = state.clock.getElapsedTime()
     
+    // Group Rotation Logic (Passive Spin vs Snap to Front)
+    if (!hovered) {
+      group.current.rotation.y += 0.005
+    } else {
+      // Shortest path rotation could be complex, but simple lerp works for this range
+      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, -Math.PI / 4, 0.1)
+    }
+
     // Mouse Tracking Logic
-    // Target rotations based on mouse position
-    const targetBaseRot = (state.mouse.x * Math.PI) / 3 // +/- 60 degrees
-    const targetLowerArmRot = 0.2 + (state.mouse.y * Math.PI) / 6 // Base offset + tracking
-    const targetUpperArmRot = -1 - (state.mouse.y * Math.PI) / 6 // Counter-movement for realism
-    // Claw tracks mouse Y (Up/Down) + subtle breathing
-    // Adjusted base rotation to -1.0 to tilt it 90 degrees up (opposite of previous change)
-    const targetClawRot = -1.0 + (state.mouse.y * Math.PI) / 3 + Math.sin(t * 2) * 0.05
+    let targetBaseRot = 0
+    let targetLowerArmRot = 0.2
+    let targetUpperArmRot = -1
+    let targetClawRot = -1.0 + Math.sin(t * 2) * 0.05 // Default idle breathing
+
+    if (hovered) {
+       // Active tracking when hovered
+       targetBaseRot = (state.mouse.x * Math.PI) / 3 
+       targetLowerArmRot = 0.2 + (state.mouse.y * Math.PI) / 6
+       targetUpperArmRot = -1 - (state.mouse.y * Math.PI) / 6
+       targetClawRot = -1.0 + (state.mouse.y * Math.PI) / 3 + Math.sin(t * 2) * 0.05
+    } else {
+       // Gentle idle when spinning
+       targetBaseRot = Math.sin(t * 0.5) * 0.1
+       targetLowerArmRot = 0.2 + Math.sin(t * 0.5) * 0.1
+    }
 
     // Smoothly interpolate towards targets
     baseRef.current.rotation.y = THREE.MathUtils.lerp(baseRef.current.rotation.y, targetBaseRot, 0.1)
@@ -46,17 +64,21 @@ function Arm() {
     const pinch = Math.sin(t * 4) * 0.25 - 0.05
     if (leftFingerRef.current) leftFingerRef.current.rotation.x = pinch
     if (rightFingerRef.current) rightFingerRef.current.rotation.x = -pinch
-
-    // Passive 360 degree rotation
-    group.current.rotation.y += 0.005
   })
 
   return (
-    <group ref={group} position={[0, -2, 0]} scale={0.7} rotation={[0, -Math.PI / 4, 0]}>
+    <group 
+      ref={group} 
+      position={[0, -2, 0]} 
+      scale={0.7} 
+      rotation={[0, -Math.PI / 4, 0]}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+    >
       {/* Base */}
       <group ref={baseRef}>
         <mesh position={[0, 0.2, 0]} material={jointMaterial}>
-          <cylinderGeometry args={[0.6, 0.8, 0.4, 32]} />
+          <cylinderGeometry args={[1, 1.2, 0.4, 32]} />
         </mesh>
         
         {/* Turret */}
