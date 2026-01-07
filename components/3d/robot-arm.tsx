@@ -22,28 +22,27 @@ function Arm() {
   useFrame((state) => {
     if (!baseRef.current || !lowerArmRef.current || !upperArmRef.current || !clawRef.current || !leftFingerRef.current || !rightFingerRef.current) return
 
-    // Smooth animation based on time instead of just mouse for visibility
     const t = state.clock.getElapsedTime()
     
-    // Active "Wave" animation
-    baseRef.current.rotation.y = Math.sin(t * 0.8) * 0.5 // Sweeping left/right
-    lowerArmRef.current.rotation.z = Math.sin(t * 0.5) * 0.1 + 0.2
-    upperArmRef.current.rotation.z = Math.cos(t * 0.5) * 0.1 - 1
-    
-    // Rapid waving of the claw
+    // Mouse Tracking Logic
+    // Target rotations based on mouse position
+    const targetBaseRot = (state.mouse.x * Math.PI) / 3 // +/- 60 degrees
+    const targetLowerArmRot = 0.2 + (state.mouse.y * Math.PI) / 6 // Base offset + tracking
+    const targetUpperArmRot = -1 - (state.mouse.y * Math.PI) / 6 // Counter-movement for realism
+
+    // Smoothly interpolate towards targets
+    baseRef.current.rotation.y = THREE.MathUtils.lerp(baseRef.current.rotation.y, targetBaseRot, 0.1)
+    lowerArmRef.current.rotation.z = THREE.MathUtils.lerp(lowerArmRef.current.rotation.z, targetLowerArmRot, 0.1)
+    upperArmRef.current.rotation.z = THREE.MathUtils.lerp(upperArmRef.current.rotation.z, targetUpperArmRot, 0.1)
+
+    // Independent "Liveliness" Animations for Claw
+    // Waving claw
     clawRef.current.rotation.z = Math.sin(t * 3) * 0.3 + 0.5
     
-    // Grippers pinching
+    // Pinching grippers
     const pinch = (Math.sin(t * 4) + 1) * 0.15
     leftFingerRef.current.rotation.z = 0.1 + pinch
     rightFingerRef.current.rotation.z = -0.1 - pinch
-    
-    // Interactive mouse influence (subtle)
-    const mouseX = (state.mouse.x * Math.PI) / 6
-    const mouseY = (state.mouse.y * Math.PI) / 6
-    
-    baseRef.current.rotation.y += mouseX
-    lowerArmRef.current.rotation.z -= mouseY
   })
 
   return (
@@ -132,9 +131,6 @@ export function RobotArm() {
         </Float>
         
         <ContactShadows position={[0, -2.5, 0]} opacity={0.5} scale={20} blur={2} />
-        
-        {/* Helpers to debug orientation */}
-        <Grid position={[0, -2.5, 0]} args={[10, 10]} cellColor="#888" sectionColor="#06b6d4" fadeDistance={20} />
         
         <OrbitControls 
           enableZoom={false} 
