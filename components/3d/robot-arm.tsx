@@ -40,13 +40,14 @@ function Arm() {
     clawRef.current.rotation.z = Math.sin(t * 3) * 0.3 + 0.5
     
     // Pinching grippers (rotated 90 degrees to rotate around X axis)
-    const pinch = (Math.sin(t * 4) + 1) * 0.2
+    // Range: [-0.3, 0.2] - Negative opens wide, Positive closes gently
+    const pinch = Math.sin(t * 4) * 0.25 - 0.05
     if (leftFingerRef.current) leftFingerRef.current.rotation.x = pinch
     if (rightFingerRef.current) rightFingerRef.current.rotation.x = -pinch
   })
 
   return (
-    <group ref={group} position={[0, -2, 0]} scale={0.7} rotation={[0, -Math.PI / 2, 0]}>
+    <group ref={group} position={[0, -2, 0]} scale={0.7} rotation={[0, -Math.PI / 4, 0]}>
       {/* Base */}
       <group ref={baseRef}>
         <mesh position={[0, 0.2, 0]} material={jointMaterial}>
