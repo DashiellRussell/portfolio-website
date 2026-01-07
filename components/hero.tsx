@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Download, ArrowRight } from "lucide-react"
+import { Download, ArrowRight, Move3d } from "lucide-react"
 import Image from "next/image"
 import { FadeIn, FadeInStagger, FadeInItem } from "@/components/ui/motion-wrapper"
 import { motion } from "framer-motion"
+import { RobotArm } from "@/components/3d/robot-arm"
 
 export function Hero() {
   const scrollToProjects = () => {
@@ -55,14 +56,18 @@ export function Hero() {
                 </FadeInItem>
               </div>
 
-              <FadeInItem className="order-1 md:order-2">
+              <FadeInItem className="order-1 md:order-2 flex flex-col items-center gap-4">
                 <motion.div
-                  className="relative w-80 h-80 flex-shrink-0 border-8 border-border shadow-brutal bg-card"
-                  whileHover={{ scale: 1.02, rotate: 2 }}
+                  className="relative w-80 h-96 flex-shrink-0 border-8 border-border shadow-brutal bg-card overflow-hidden"
+                  whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Image src="/profile-pic.jpeg" alt="Dashiell Russell" fill className="object-cover" priority />
+                  <RobotArm />
                 </motion.div>
+                <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-foreground/50">
+                  <Move3d className="w-4 h-4 animate-pulse" />
+                  Interactive Model
+                </div>
               </FadeInItem>
             </div>
           </FadeInStagger>
