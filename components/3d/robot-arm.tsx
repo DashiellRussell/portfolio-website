@@ -30,7 +30,8 @@ function Arm() {
     const targetLowerArmRot = 0.2 + (state.mouse.y * Math.PI) / 6 // Base offset + tracking
     const targetUpperArmRot = -1 - (state.mouse.y * Math.PI) / 6 // Counter-movement for realism
     // Claw tracks mouse Y (Up/Down) + subtle breathing
-    const targetClawRot = 0.5 + (state.mouse.y * Math.PI) / 3 + Math.sin(t * 2) * 0.05
+    // Adjusted base rotation to -1.0 to tilt it 90 degrees up (opposite of previous change)
+    const targetClawRot = -1.0 + (state.mouse.y * Math.PI) / 3 + Math.sin(t * 2) * 0.05
 
     // Smoothly interpolate towards targets
     baseRef.current.rotation.y = THREE.MathUtils.lerp(baseRef.current.rotation.y, targetBaseRot, 0.1)
