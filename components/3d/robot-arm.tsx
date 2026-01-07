@@ -46,7 +46,7 @@ function Arm() {
   })
 
   return (
-    <group ref={group} position={[0, -2, 0]} scale={0.7}>
+    <group ref={group} position={[0, -2, 0]} scale={0.7} rotation={[0, -Math.PI / 2, 0]}>
       {/* Base */}
       <group ref={baseRef}>
         <mesh position={[0, 0.2, 0]} material={jointMaterial}>
