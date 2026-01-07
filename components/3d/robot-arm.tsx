@@ -38,7 +38,7 @@ function Arm() {
   })
 
   return (
-    <group ref={group} position={[0, -1.5, 0]}>
+    <group ref={group} position={[0, -2, 0]} scale={0.7}>
       {/* Base */}
       <group ref={baseRef}>
         <mesh position={[0, 0.2, 0]} material={jointMaterial}>
@@ -111,7 +111,7 @@ export function RobotArm() {
   return (
     <div className="w-full h-full min-h-[400px] bg-muted/20 rounded-xl overflow-hidden cursor-move">
       <Canvas>
-        <PerspectiveCamera makeDefault position={[4, 4, 6]} fov={50} />
+        <PerspectiveCamera makeDefault position={[8, 8, 10]} fov={50} />
         
         {/* High intensity lighting to ensure visibility */}
         <ambientLight intensity={1.5} />
