@@ -39,10 +39,10 @@ function Arm() {
     // Waving claw
     clawRef.current.rotation.z = Math.sin(t * 3) * 0.3 + 0.5
     
-    // Pinching grippers
-    const pinch = (Math.sin(t * 4) + 1) * 0.15
-    leftFingerRef.current.rotation.z = 0.1 + pinch
-    rightFingerRef.current.rotation.z = -0.1 - pinch
+    // Pinching grippers (rotated 90 degrees to rotate around X axis)
+    const pinch = (Math.sin(t * 4) + 1) * 0.2
+    if (leftFingerRef.current) leftFingerRef.current.rotation.x = pinch
+    if (rightFingerRef.current) rightFingerRef.current.rotation.x = -pinch
   })
 
   return (
@@ -93,19 +93,31 @@ function Arm() {
               
               {/* Claw mechanism */}
               <group position={[0, 0.5, 0]}>
-                 <mesh position={[0, 0.2, 0]} material={accentMaterial}>
-                    <boxGeometry args={[0.8, 0.4, 0.8]} />
+                 <mesh position={[0, 0.1, 0]} material={accentMaterial}>
+                    <boxGeometry args={[0.8, 0.2, 0.8]} />
                  </mesh>
                  
-                 {/* Left Finger */}
-                 <mesh ref={leftFingerRef} position={[-0.3, 0.8, 0]} rotation={[0, 0, 0.2]} material={mainMaterial}>
-                    <boxGeometry args={[0.15, 1, 0.4]} />
-                 </mesh>
+                 {/* Left Finger Group (Hinged at base) */}
+                 <group ref={leftFingerRef} position={[0, 0.2, -0.3]}>
+                    <mesh position={[0, 0.4, 0]} material={mainMaterial}>
+                       <boxGeometry args={[0.4, 0.8, 0.1]} />
+                    </mesh>
+                    {/* Gripper Tip */}
+                    <mesh position={[0, 0.8, 0.1]} rotation={[-0.4, 0, 0]} material={accentMaterial}>
+                       <boxGeometry args={[0.4, 0.3, 0.1]} />
+                    </mesh>
+                 </group>
                  
-                 {/* Right Finger */}
-                 <mesh ref={rightFingerRef} position={[0.3, 0.8, 0]} rotation={[0, 0, -0.2]} material={mainMaterial}>
-                    <boxGeometry args={[0.15, 1, 0.4]} />
-                 </mesh>
+                 {/* Right Finger Group (Hinged at base) */}
+                 <group ref={rightFingerRef} position={[0, 0.2, 0.3]}>
+                    <mesh position={[0, 0.4, 0]} material={mainMaterial}>
+                       <boxGeometry args={[0.4, 0.8, 0.1]} />
+                    </mesh>
+                    {/* Gripper Tip */}
+                    <mesh position={[0, 0.8, -0.1]} rotation={[0.4, 0, 0]} material={accentMaterial}>
+                       <boxGeometry args={[0.4, 0.3, 0.1]} />
+                    </mesh>
+                 </group>
               </group>
             </group>
           </group>
