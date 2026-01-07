@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { ChevronDown, Sparkles, Briefcase } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { FadeIn, FadeInStagger, FadeInItem } from "@/components/ui/motion-wrapper"
 
 export function Experience() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
@@ -109,23 +111,25 @@ export function Experience() {
   ]
 
   return (
-    <section id="experience" className="py-24 px-4 sm:px-6 lg:px-8">
+    <section id="experience" className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="container mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold mb-4 uppercase tracking-tight">Work Experience</h2>
-          <p className="text-xl text-foreground/70 font-medium">
-            My professional journey in software engineering and robotics.
-          </p>
-        </div>
+        <FadeIn>
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-4 uppercase tracking-tight">Work Experience</h2>
+            <p className="text-xl text-foreground/70 font-medium">
+              My professional journey in software engineering and robotics.
+            </p>
+          </div>
+        </FadeIn>
 
         <div className="max-w-4xl mx-auto">
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-border hidden md:block" />
 
-            <div className="space-y-8">
+            <FadeInStagger className="space-y-8">
               {experiences.map((exp, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute left-0 top-6 w-10 h-10 bg-accent text-accent-foreground border-4 border-border -translate-x-[18px] hidden md:flex items-center justify-center shadow-brutal-sm">
+                <FadeInItem key={idx} className="relative">
+                  <div className="absolute left-0 top-6 w-10 h-10 bg-accent text-accent-foreground border-4 border-border -translate-x-[18px] hidden md:flex items-center justify-center shadow-brutal-sm z-10">
                     {exp.icon}
                   </div>
 
@@ -167,35 +171,47 @@ export function Experience() {
                       </div>
                     </button>
 
-                    {expandedIndex === idx && (
-                      <div className="mt-4 bg-card border-4 border-border border-t-0 p-6 pt-4 shadow-brutal-lg">
-                        <h4 className="text-lg font-bold text-foreground mb-4 uppercase tracking-wide">
-                          Key Achievements
-                        </h4>
-                        <ul className="space-y-4 mb-6">
-                          {exp.details.map((detail, detailIdx) => (
-                            <li key={detailIdx} className="flex gap-4">
-                              <span className="text-accent text-2xl font-bold mt-1">•</span>
-                              <span className="text-foreground/70 leading-relaxed flex-1 font-medium">{detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="flex flex-wrap gap-3">
-                          {exp.tags.map((tag, tagIdx) => (
-                            <span
-                              key={tagIdx}
-                              className="px-3 py-1 bg-accent text-accent-foreground text-xs font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {expandedIndex === idx && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-4 bg-card border-4 border-border border-t-0 p-6 pt-4 shadow-brutal-lg">
+                            <h4 className="text-lg font-bold text-foreground mb-4 uppercase tracking-wide">
+                              Key Achievements
+                            </h4>
+                            <ul className="space-y-4 mb-6">
+                              {exp.details.map((detail, detailIdx) => (
+                                <li key={detailIdx} className="flex gap-4">
+                                  <span className="text-accent text-2xl font-bold mt-1">•</span>
+                                  <span className="text-foreground/70 leading-relaxed flex-1 font-medium">
+                                    {detail}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="flex flex-wrap gap-3">
+                              {exp.tags.map((tag, tagIdx) => (
+                                <span
+                                  key={tagIdx}
+                                  className="px-3 py-1 bg-accent text-accent-foreground text-xs font-bold border-4 border-border uppercase tracking-wide shadow-brutal-sm"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
+                </FadeInItem>
               ))}
-            </div>
+            </FadeInStagger>
           </div>
         </div>
       </div>
