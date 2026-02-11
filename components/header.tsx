@@ -88,7 +88,7 @@ export function Header() {
                 </a>
               ))}
               <a
-                href="/Dashiell-Russell-Resume.pdf"
+                href="/Dashiell Russell - Resume.pdf"
                 download
                 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-foreground hover:text-accent transition-colors"
               >

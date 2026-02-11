@@ -48,7 +48,7 @@ export function Hero() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                   <Button variant="outline" size="lg" asChild className="flex-1 sm:flex-none bg-transparent">
-                    <a href="/Dashiell-Russell-Resume.pdf" download>
+                    <a href="/Dashiell Russell - Resume.pdf" download>
                       Download CV
                       <Download className="ml-2 h-5 w-5" />
                     </a>
