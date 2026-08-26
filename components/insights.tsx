@@ -59,21 +59,21 @@ export function Insights() {
               {repositories.map((repo, idx) => (
                 <div
                   key={idx}
-                  className="bg-background text-foreground border-4 border-border p-6 shadow-brutal hover:shadow-brutal-lg hover:translate-x-1 hover:translate-y-1 transition-all"
+                  className="min-w-0 bg-background text-foreground border-4 border-border p-6 shadow-brutal hover:shadow-brutal-lg hover:translate-x-1 hover:translate-y-1 transition-all"
                 >
                   <div className="space-y-4">
-                    <div>
+                    <div className="min-w-0">
                       <a
                         href={repo.html_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xl font-bold text-foreground hover:text-accent transition-colors uppercase tracking-wide inline-flex items-center gap-2"
+                        className="text-xl font-bold text-foreground hover:text-accent transition-colors uppercase tracking-wide flex items-start gap-2"
                       >
-                        {repo.name}
-                        <ExternalLink className="h-5 w-5" />
+                        <span className="min-w-0 wrap-anywhere">{repo.name}</span>
+                        <ExternalLink className="h-5 w-5 shrink-0 mt-1" />
                       </a>
                     </div>
-                    <p className="text-sm text-foreground/70 leading-relaxed font-medium">
+                    <p className="text-sm text-foreground/70 leading-relaxed font-medium break-words">
                       {repo.description || "No description available."}
                     </p>
                     <div className="flex items-center justify-between pt-2">
