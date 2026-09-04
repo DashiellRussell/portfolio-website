@@ -1,51 +1,42 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Geist_Mono, Space_Grotesk, Space_Mono } from "next/font/google"
+import { Archivo, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+
+import { ZoneProvider } from "@/components/space/zone-provider"
+import { SiteHeader } from "@/components/space/site-header"
+import { Preloader } from "@/components/space/preloader"
+import { SiteFooter } from "@/components/space/site-footer"
 import "./globals.css"
 
-const inter = Inter({
+/** Display: a grotesk that holds up at very large sizes and in all-caps. */
+const display = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600"],
+  variable: "--font-display",
+  display: "swap",
 })
 
-const geistMono = Geist_Mono({
+/** Mono carries all metadata: labels, specs, telemetry. */
+const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-geist-mono",
-})
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
-})
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-space-mono",
+  variable: "--font-mono-custom",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
-  title: "Dashiell Russell - Portfolio",
+  title: {
+    default: "Dashiell Russell — Spacecraft electronics and avionics",
+    template: "%s",
+  },
   description:
-    "Building The Future - Portfolio of Dashiell Russell, showcasing engineering projects and technical expertise",
+    "Mechatronics engineering and physics at UNSW. Spacecraft electronics, rocket avionics, and the embedded software that runs on them.",
   icons: {
     icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },
@@ -53,13 +44,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.className} font-sans antialiased`}>
-        {children}
+    // The site is dark-only by design — the ASCII field and zone accents are
+    // built for a dark ground and a light theme would undo both.
+    <html lang="en" className={`${display.variable} ${mono.variable}`}>
+      <body className="font-sans antialiased">
+        <Preloader />
+        <ZoneProvider initial="ascent">
+          <SiteHeader />
+          <main>{children}</main>
+          <SiteFooter />
+        </ZoneProvider>
         <Analytics />
       </body>
     </html>

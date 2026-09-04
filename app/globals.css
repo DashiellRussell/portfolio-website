@@ -3,213 +3,241 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  /* Neo-brutalism color system with high contrast and vibrant colors */
-  --background: #fef9f3;
-  --foreground: #000000;
-  --card: #ffffff;
-  --card-foreground: #000000;
-  --popover: #ffffff;
-  --popover-foreground: #000000;
-  --primary: #000000;
-  --primary-foreground: #ffffff;
-  --secondary: #6366f1;
-  --secondary-foreground: #ffffff;
-  --muted: #f3f4f6;
-  --muted-foreground: #4b5563;
-  --accent: #06b6d4;
-  --accent-foreground: #000000;
-  --amber: #fbbf24;
-  --amber-foreground: #000000;
-  --pink: #ec4899;
-  --pink-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #000000;
-  --input: #000000;
-  --ring: #000000;
-  --chart-1: #06b6d4;
-  --chart-2: #fbbf24;
-  --chart-3: #ec4899;
-  --chart-4: #6366f1;
-  --chart-5: #000000;
-  --radius: 0.625rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #000000;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #000000;
-  --sidebar-ring: #000000;
-}
+/* ============================================================
+   DESIGN SYSTEM — deep-space technical
+   One system. Zones shift environment (backdrop + accent),
+   never typography, spacing, or component language.
+   ============================================================ */
 
-.dark {
-  /* Softened dark mode palette - using dark grays instead of pure black for less harsh contrast */
-  --background: #18181b;
-  --foreground: #fafafa;
-  --card: #27272a;
-  --card-foreground: #fafafa;
-  --popover: #27272a;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #818cf8;
-  --secondary-foreground: #18181b;
-  --muted: #3f3f46;
-  --muted-foreground: #a1a1aa;
-  --accent: #22d3ee;
-  --accent-foreground: #18181b;
-  --amber: #fcd34d;
-  --amber-foreground: #18181b;
-  --pink: #f472b6;
-  --pink-foreground: #18181b;
-  --destructive: #f87171;
-  --destructive-foreground: #18181b;
-  --border: #fafafa;
-  --input: #fafafa;
-  --ring: #fafafa;
-  --chart-1: #22d3ee;
-  --chart-2: #fcd34d;
-  --chart-3: #f472b6;
-  --chart-4: #818cf8;
-  --chart-5: #fafafa;
-  --sidebar: #27272a;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #fafafa;
-  --sidebar-primary-foreground: #18181b;
-  --sidebar-accent: #3f3f46;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #fafafa;
-  --sidebar-ring: #fafafa;
+:root {
+  /* Ground truth: near-black, not pure black. Keeps shadows readable. */
+  --background: #05070d;
+  --foreground: #e8ecf5;
+
+  --surface: #0a0e18;
+  --surface-raised: #101624;
+  --surface-sunken: #03050a;
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--foreground);
+
+  --primary: #e8ecf5;
+  --primary-foreground: #05070d;
+
+  --muted: #151c2b;
+  --muted-foreground: #8b97ad;
+  --subtle: #5a6478;
+
+  --border: #1c2537;
+  --border-strong: #2c374d;
+  --input: #1c2537;
+
+  --destructive: #ff5c5c;
+  --destructive-foreground: #05070d;
+
+  /* Zone accents — the only colour that changes with scroll. */
+  --zone-ascent: #ff6b2c;   /* plume orange  */
+  --zone-orbit: #35d6f0;    /* cyan          */
+  --zone-deep: #9b6bff;     /* violet        */
+  --zone-ground: #3ddc84;   /* signal green  */
+
+  /* Live accent — driven by the zone provider. Defaults to orbit. */
+  --accent: var(--zone-orbit);
+  --accent-foreground: #05070d;
+  --accent-dim: color-mix(in oklab, var(--accent) 40%, transparent);
+  --accent-faint: color-mix(in oklab, var(--accent) 12%, transparent);
+  --ring: var(--accent);
+
+  --radius: 2px;
+
+  /* Type scale — a fifth, tightened at display sizes. */
+  --step--1: clamp(0.78rem, 0.76rem + 0.1vw, 0.84rem);
+  --step-0: clamp(0.94rem, 0.9rem + 0.18vw, 1.05rem);
+  --step-1: clamp(1.18rem, 1.1rem + 0.4vw, 1.45rem);
+  --step-2: clamp(1.5rem, 1.32rem + 0.9vw, 2.1rem);
+  --step-3: clamp(1.95rem, 1.6rem + 1.8vw, 3.2rem);
+  --step-4: clamp(2.5rem, 1.85rem + 3.2vw, 4.8rem);
+  --step-5: clamp(3rem, 1.9rem + 5.4vw, 7.5rem);
+
+  /* Vertical rhythm */
+  --section-y: clamp(5rem, 10vw, 9rem);
+  --gutter: clamp(1.25rem, 4vw, 3rem);
 }
 
 @theme inline {
-  /* Using Space Grotesk for bold neo-brutalism typography */
-  --font-sans: "Space Grotesk", "Inter", "Inter Fallback";
-  --font-mono: "Space Mono", "Geist Mono", "Geist Mono Fallback";
+  --font-sans: var(--font-display), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-mono-custom), "Geist Mono", ui-monospace, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--surface-raised);
+  --color-secondary-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-amber: var(--amber);
-  --color-amber-foreground: var(--amber-foreground);
-  --color-pink: var(--pink);
-  --color-pink-foreground: var(--pink-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+
+  --text-step--1: var(--step--1);
+  --text-step-0: var(--step-0);
+  --text-step-1: var(--step-1);
+  --text-step-2: var(--step-2);
+  --text-step-3: var(--step-3);
+  --text-step-4: var(--step-4);
+  --text-step-5: var(--step-5);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-background text-foreground;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  /* Accent transitions between zones. Slow enough to feel atmospheric. */
+  :root {
+    transition: --accent 900ms linear;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
   }
 }
 
-/* Add neo-brutalist shadow utilities */
-.shadow-brutal {
-  box-shadow: 6px 6px 0px 0px #000000;
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #35d6f0;
 }
 
-.dark .shadow-brutal {
-  /* Softened shadow color for dark mode */
-  box-shadow: 6px 6px 0px 0px #fafafa;
+/* ============================================================
+   PRIMITIVES
+   ============================================================ */
+
+/* Mono label — the metadata voice of the site. */
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
-.shadow-brutal-sm {
-  box-shadow: 3px 3px 0px 0px #000000;
+.label-accent {
+  color: var(--accent);
 }
 
-.dark .shadow-brutal-sm {
-  /* Softened shadow color for dark mode */
-  box-shadow: 3px 3px 0px 0px #fafafa;
+/* Display heading — tight, condensed, SpaceX-adjacent. */
+.display {
+  font-size: var(--step-5);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
-.shadow-brutal-lg {
-  box-shadow: 10px 10px 0px 0px #000000;
+.headline {
+  font-size: var(--step-3);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 500;
 }
 
-.dark .shadow-brutal-lg {
-  /* Softened shadow color for dark mode */
-  box-shadow: 10px 10px 0px 0px #fafafa;
+/* Hairline rules instead of boxes wherever possible. */
+.rule {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--border-strong),
+    transparent
+  );
 }
 
-/* Custom scroll behavior */
-html {
-  scroll-behavior: smooth;
+/* Technical panel — instrument readout framing. */
+.panel {
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
 }
 
-/* Custom Animations */
-@keyframes mist-slide {
-  0% {
-    transform: translateX(-150%) skewX(-15deg);
-    opacity: 0;
+.panel-accent {
+  border-color: var(--accent-dim);
+  box-shadow: inset 0 0 0 1px var(--accent-faint);
+}
+
+/* Corner ticks — CAD/instrument detail. */
+.ticked {
+  position: relative;
+}
+.ticked::before,
+.ticked::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: var(--accent);
+  border-style: solid;
+  opacity: 0.7;
+}
+.ticked::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+.ticked::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.container-page {
+  width: 100%;
+  max-width: 84rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  10% {
-    opacity: 0.5;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  40% {
-    opacity: 0.5;
-  }
-  50% {
-    transform: translateX(150%) skewX(-15deg);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(150%) skewX(-15deg);
-    opacity: 0;
-  }
-}
-
-.animate-mist {
-  animation: mist-slide 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--accent), inset 0 0 5px var(--accent);
-    border-color: var(--accent);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--accent), inset 0 0 10px var(--accent);
-    border-color: var(--foreground);
-  }
-}
-
-.shadow-glow {
-  animation: glow-pulse 3s infinite ease-in-out;
 }
