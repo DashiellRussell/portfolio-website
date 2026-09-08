@@ -303,6 +303,7 @@ export function PlumeVolume({
   }, [])
 
   const uniforms = useMemo(
+    // initial values only - useFrame writes to the material's uniforms after this
     () => ({
       uCamObj: { value: new THREE.Vector3() },
       uBoxMin: { value: BOX_MIN.clone() },
@@ -326,7 +327,12 @@ export function PlumeVolume({
 
   useFrame((state) => {
     if (!mesh.current) return
-    const u = uniforms
+    // Write to the material's OWN uniforms. Passing a uniforms object as a prop
+    // does not keep identity - the material ends up with a clone, so mutating
+    // the object we created here silently updates nothing. That froze uTime,
+    // killed the sliders, and left uCamObj at the origin, which put the ray
+    // origin inside the volume and smeared the whole plume.
+    const u = (mesh.current.material as THREE.ShaderMaterial).uniforms
 
     const t = still ? 0 : state.clock.getElapsedTime()
     u.uTime.value = t
@@ -347,6 +353,7 @@ export function PlumeVolume({
     camObj.copy(camera.position)
     mesh.current.worldToLocal(camObj)
     u.uCamObj.value.copy(camObj)
+
   })
 
   return (
