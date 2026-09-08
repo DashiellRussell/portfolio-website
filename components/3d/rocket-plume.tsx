@@ -47,6 +47,7 @@ const fragmentShader = /* glsl */ `
   uniform float uShockSpacing;
   uniform float uShockDecay;
   uniform float uSoot;
+  uniform float uBlueTint;
   uniform float uTurbulence;
   uniform float uFlowSpeed;
   uniform float uExposure;
@@ -84,19 +85,19 @@ const fragmentShader = /* glsl */ `
     return f;
   }
 
-  // barrel shock radius at axial distance z, plus the shock phase/envelope
-  float plumeRadius(float z, out float shockEnv, out float phase) {
+  // barrel shock radius at (compressed) axial distance zc
+  float plumeRadius(float z, float zc, out float shockEnv, out float phase) {
     float R0 = 0.30 + 0.07 * uThrottle;
     shockEnv = exp(-z * uShockDecay);
-    phase = z * TAU / max(uShockSpacing, 0.05);
-    // tight near the throat, billowing once the shock train has died
+    phase = zc * TAU / max(uShockSpacing, 0.05);
     float spread = 1.0 + 0.10 * z + 0.022 * z * z;
     return R0 * spread * (1.0 + 0.30 * shockEnv * cos(phase));
   }
 
-  void sampleMedium(vec3 p, out float density, out float temp) {
+  void sampleMedium(vec3 p, out float density, out float temp, out float blue) {
     density = 0.0;
     temp = 0.0;
+    blue = 0.0;
 
     // nozzle exit sits at y = 0, plume flows down -y
     float z = -p.y;
@@ -105,11 +106,18 @@ const fragmentShader = /* glsl */ `
 
     float r = length(p.xz);
 
+    // real shock cells shorten as the jet loses energy, so walk a compressed
+    // axial coordinate rather than spacing the diamonds evenly forever
+    float zc = z * (1.0 + 0.035 * z);
+
     float shockEnv, phase;
-    float R = plumeRadius(z, shockEnv, phase);
+    float R = plumeRadius(z, zc, shockEnv, phase);
 
     // cheap radial reject before touching the noise - this is the whole perf story
     if (r > R * 2.4) return;
+
+    // dissipate before the volume bound so the tail never shows a hard cut
+    float tail = smoothstep(8.2, 3.2, z);
 
     // turbulent shear layer: quiet in the core, torn at the edges, worse downstream.
     // eddy size scales with R so the plume coarsens as it expands.
@@ -124,24 +132,22 @@ const fragmentShader = /* glsl */ `
     float turb = (fbm(np * 2.6 + warp * 2.2) - 0.44) + 0.5 * (fbm(np * 6.5) - 0.44);
     float rEff = r + turb * uTurbulence * edge * grow * R * 1.6;
 
-    // dissipate before the volume bound so the tail never shows a hard cut
-    float tail = smoothstep(8.2, 3.2, z);
-
     // sharp-ish boundary, otherwise the eddies smear into mush
     float core = smoothstep(R, R * 0.78, rEff);
     if (core <= 0.0) return;
 
     float axial = exp(-z * 0.34) * tail;
 
-    // mach discs. A disc is lens-shaped, not a flat band: it swells from nothing
-    // at the cell boundary to its widest on the axis at the pinch, so the radial
-    // extent has to shrink with the cell coordinate or it reads as a stripe.
-    float u = fract(z / max(uShockSpacing, 0.05) + 0.5);
-    float lens = max(0.0, 1.0 - abs(2.0 * u - 1.0) * 1.40);
-    float discR = R * 0.62 * lens;
-    float diamond = shockEnv * lens * smoothstep(discR, 0.0, r) * tail;
+    // A shock cell is not just a bright disc. Each cell carries a lens-shaped
+    // mach disc on the axis plus the oblique shocks that cross to make the X,
+    // converging on the barrel radius at the cell boundary.
+    float u = fract(zc / max(uShockSpacing, 0.05) + 0.5);
+    float lens = max(0.0, 1.0 - abs(2.0 * u - 1.0) * 1.45);
+    float disc = smoothstep(R * 0.62 * lens, 0.0, r) * lens;
+    float xArm = exp(-pow((r - R * 0.85 * (1.0 - lens)) / (0.055 * R + 0.008), 2.0)) * lens;
+    float diamond = shockEnv * (disc + 0.45 * xArm) * tail;
 
-    // thin shell on the barrel shock itself - reads as the crossing X pattern
+    // thin shell on the barrel shock itself
     float shell = exp(-pow((r - R) / (0.09 * R + 0.010), 2.0)) * shockEnv;
 
     density = (core * (1.0 + 2.6 * diamond) + shell * 0.5) * tail;
@@ -149,9 +155,14 @@ const fragmentShader = /* glsl */ `
 
     temp = (axial * (0.5 + 0.5 * core) + 2.0 * diamond * exp(-z * 0.08) + 0.45 * shell) * tail;
     temp = clamp(temp, 0.0, 2.4);
+
+    // Clean, fully burnt gas just off the throat glows blue-violet from radical
+    // recombination; soot only starts radiating orange further downstream. The
+    // first shock cells stay blue-tinged because they are reheated.
+    blue = core * (exp(-z * 1.15) + 0.35 * diamond * exp(-z * 0.7));
   }
 
-  vec3 emissionColor(float t) {
+  vec3 emissionColor(float t, float blue) {
     float x = clamp(t / 1.6, 0.0, 1.0);
     vec3 cool = vec3(0.55, 0.07, 0.01);
     vec3 warm = vec3(1.00, 0.30, 0.04);
@@ -163,8 +174,16 @@ const fragmentShader = /* glsl */ `
     // low soot = hydrolox, nearly colourless with a blue lean
     vec3 lean = mix(vec3(0.45, 0.62, 1.00), vec3(1.0), smoothstep(0.5, 1.0, x));
     c = mix(lean, c, uSoot);
-    // the ramp above is authored in sRGB, but we shade in linear and
-    // colorspace_fragment re-encodes on output - skip this and orange reads beige
+
+    // recombination glow near the exit plane
+    vec3 flameBlue = vec3(0.16, 0.42, 1.00);
+    vec3 violet = vec3(0.60, 0.42, 1.00);
+    vec3 b = mix(flameBlue, violet, smoothstep(0.45, 1.0, x));
+    // sharp handoff - a linear blend between blue and orange just makes mauve
+    c = mix(c, b, smoothstep(0.15, 0.70, blue * uBlueTint));
+
+    // the ramp above is authored in sRGB, but we shade in linear and the
+    // renderer re-encodes on output - skip this and orange reads beige
     return pow(c, vec3(2.2));
   }
 
@@ -197,11 +216,11 @@ const fragmentShader = /* glsl */ `
     for (int i = 0; i < STEPS; i++) {
       vec3 p = ro + rd * depth;
 
-      float d, temp;
-      sampleMedium(p, d, temp);
+      float d, temp, blue;
+      sampleMedium(p, d, temp, blue);
 
       if (d > 0.001) {
-        vec3 em = emissionColor(temp) * pow(temp, 3.0) * 3.0;
+        vec3 em = emissionColor(temp, blue) * pow(temp, 3.0) * 3.0;
         acc += em * d * trans * dt;
         // cool gas is sooty and absorbs hard - that is what gives the dark edges
         float absorb = mix(2.0, 6.0, uSoot) * (0.4 + 0.8 * (1.0 - clamp(temp, 0.0, 1.0)));
@@ -222,8 +241,10 @@ const fragmentShader = /* glsl */ `
     float e = 1.0 - exp(-peak * uExposure);
     vec3 col = mix(hue, vec3(1.0), smoothstep(0.72, 1.0, e)) * e;
 
+    // NOTE: no <tonemapping_fragment> here. We already tonemapped above, and the
+    // renderer is set to NoToneMapping - running ACES on top crushes the plume
+    // to near black, which is exactly what hid it on the page.
     gl_FragColor = vec4(col, 1.0);
-    #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `
@@ -233,6 +254,8 @@ type PlumeTuning = {
   throttle?: number
   /** 0 = hydrolox (near invisible blue), 1 = kerolox (orange, sooty) */
   soot?: number
+  /** strength of the blue recombination glow just off the nozzle exit */
+  blueTint?: number
   /** mach disc spacing; physically ~1.3 * D * sqrt(M^2 - 1) */
   shockSpacing?: number
   /** how fast the diamonds fade downstream */
@@ -247,6 +270,7 @@ type PlumeTuning = {
 export function PlumeVolume({
   throttle = 0.85,
   soot = 0.9,
+  blueTint = 0.85,
   shockSpacing = 0.85,
   shockDecay = 0.40,
   turbulence = 1.15,
@@ -276,6 +300,7 @@ export function PlumeVolume({
       uShockSpacing: { value: shockSpacing },
       uShockDecay: { value: shockDecay },
       uSoot: { value: soot },
+      uBlueTint: { value: blueTint },
       uTurbulence: { value: turbulence },
       uFlowSpeed: { value: flowSpeed },
       uExposure: { value: exposure },
@@ -300,6 +325,7 @@ export function PlumeVolume({
     u.uShockSpacing.value = shockSpacing
     u.uShockDecay.value = shockDecay
     u.uSoot.value = soot
+    u.uBlueTint.value = blueTint
     u.uTurbulence.value = turbulence
     u.uFlowSpeed.value = flowSpeed
     u.uExposure.value = exposure
@@ -365,25 +391,54 @@ function PlumeGlow({ still }: { still: boolean }) {
 
 export function RocketPlume({
   className,
+  style,
+  orientation = "horizontal",
   ...tuning
-}: PlumeTuning & { className?: string }) {
+}: PlumeTuning & {
+  className?: string
+  style?: React.CSSProperties
+  /** "horizontal" fires left-to-right across the viewport; "vertical" fires downward */
+  orientation?: "horizontal" | "vertical"
+}) {
   const prefersReducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   const still = tuning.still ?? prefersReducedMotion
 
+  const horizontal = orientation === "horizontal"
+  const view = horizontal
+    ? { position: [3.2, 0.9, 9.6] as [number, number, number], target: [3.2, -0.1, 0] as [number, number, number], fov: 42 }
+    : { position: [3.6, -0.4, 7.8] as [number, number, number], target: [0, -2.9, 0] as [number, number, number], fov: 42 }
+
   return (
-    <div className={className}>
+    // an unsized parent gives the Canvas zero height and renders nothing at all,
+    // with no error - so fill by default and let callers override
+    <div className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas
         dpr={[1, 1.75]}
-        camera={{ position: [4.2, -2.2, 6.4], fov: 34 }}
-        gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
+        camera={{ position: view.position, fov: view.fov }}
+        gl={{
+          antialias: false,
+          powerPreference: "high-performance",
+          alpha: true,
+          // the shader tonemaps itself; ACES on top crushes the plume to black
+          toneMapping: THREE.NoToneMapping,
+        }}
+        onCreated={({ camera }) => {
+          // R3F does not aim the camera for you. The plume runs away from the
+          // origin, so without this it stares past the volume at empty space.
+          camera.lookAt(...view.target)
+          camera.updateProjectionMatrix()
+        }}
       >
         <color attach="background" args={["#05060a"]} />
         <ambientLight intensity={0.25} />
         <directionalLight position={[5, 4, 5]} intensity={1.2} />
-        <PlumeGlow still={still} />
-        <Nozzle />
-        <PlumeVolume {...tuning} still={still} />
+        {/* the plume is authored firing down -Y; rotating the group aims it */}
+        <group rotation={[0, 0, horizontal ? Math.PI / 2 : 0]}>
+          <PlumeGlow still={still} />
+          <Nozzle />
+          <PlumeVolume {...tuning} still={still} />
+        </group>
       </Canvas>
     </div>
   )
