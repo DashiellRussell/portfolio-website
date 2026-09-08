@@ -40,7 +40,7 @@ export function ExperiencePanel({
           </div>
         ) : experience.visual === "plume" ? (
           <div className="relative h-full w-full bg-[var(--surface-sunken)]">
-            <RocketPlume />
+            <RocketPlume zoom={1.9} />
           </div>
         ) : hasImage ? (
           <ScrubScale className="h-full w-full overflow-hidden">

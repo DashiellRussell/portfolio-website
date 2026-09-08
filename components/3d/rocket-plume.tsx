@@ -87,9 +87,11 @@ const fragmentShader = /* glsl */ `
 
   // barrel shock radius at (compressed) axial distance zc
   float plumeRadius(float z, float zc, out float shockEnv, out float phase) {
-    float R0 = 0.30 + 0.07 * uThrottle;
+    float breathe = 1.0 + 0.020 * sin(uTime * 5.1) + 0.012 * sin(uTime * 11.7);
+    float R0 = (0.30 + 0.07 * uThrottle) * breathe;
     shockEnv = exp(-z * uShockDecay);
-    phase = zc * TAU / max(uShockSpacing, 0.05);
+    // the cells ride back and forth slightly as chamber pressure hunts
+    phase = zc * TAU / max(uShockSpacing, 0.05) + 0.22 * sin(uTime * 3.7) + 0.10 * sin(uTime * 9.3);
     float spread = 1.0 + 0.035 * z + 0.004 * z * z;
     return R0 * spread * (1.0 + 0.10 * shockEnv * cos(phase));
   }
@@ -121,7 +123,7 @@ const fragmentShader = /* glsl */ `
 
     // turbulent shear layer: quiet in the core, torn at the edges, worse downstream.
     // eddy size scales with R so the plume coarsens as it expands.
-    float edge = smoothstep(R * 0.25, R * 1.05, r);
+    float edge = smoothstep(R * 0.05, R * 0.95, r);
     float grow = smoothstep(0.0, 1.4, z);
     vec3 np = vec3(p.x, p.y + uTime * uFlowSpeed, p.z);
     vec3 warp = vec3(
@@ -132,6 +134,10 @@ const fragmentShader = /* glsl */ `
     float turb = (fbm(np * 2.6 + warp * 2.2) - 0.44) + 0.5 * (fbm(np * 6.5) - 0.44);
     float rEff = r + turb * uTurbulence * edge * grow * R * 1.6;
 
+    // a clean plume still boils internally - without this only the rim moved
+    // and the whole thing read as a frozen decal
+    float shimmer = 1.0 + 0.55 * (fbm(np * 3.2 + 5.17) - 0.44);
+
     float core = smoothstep(R, R * 0.80, rEff);
     float halo = exp(-pow(max(0.0, rEff - R) / (0.5 * R + 0.05), 2.0)) * tail;
     if (core <= 0.0 && halo < 0.02) return;
@@ -141,7 +147,7 @@ const fragmentShader = /* glsl */ `
     // A shock cell is not just a bright disc. Each cell carries a lens-shaped
     // mach disc on the axis plus the oblique shocks that cross to make the X,
     // converging on the barrel radius at the cell boundary.
-    float u = fract(zc / max(uShockSpacing, 0.05) + 0.5);
+    float u = fract(zc / max(uShockSpacing, 0.05) + 0.5 + (0.22 * sin(uTime * 3.7) + 0.10 * sin(uTime * 9.3)) / TAU);
     float lens = max(0.0, 1.0 - abs(2.0 * u - 1.0) * 1.25);
     // discs shrink as the shock train decays, like the reference firing
     float disc = smoothstep(R * 1.02 * lens * (0.45 + 0.55 * shockEnv), 0.0, r) * lens;
@@ -151,7 +157,7 @@ const fragmentShader = /* glsl */ `
     // thin shell on the barrel shock itself
     float shell = exp(-pow((r - R) / (0.09 * R + 0.010), 2.0)) * shockEnv;
 
-    density = (core * (1.0 + 3.2 * diamond) + shell * 0.35) * tail + halo * 0.18 * (1.0 - core);
+    density = (core * shimmer * (1.0 + 3.2 * diamond) + shell * 0.35) * tail + halo * 0.18 * (1.0 - core);
     density *= mix(0.6, 1.0, uThrottle);
 
     temp = (axial * (0.45 + 0.5 * core) + 2.6 * diamond * exp(-z * 0.05) + 0.3 * shell) * tail;
@@ -280,8 +286,8 @@ export function PlumeVolume({
   blueTint = 0.85,
   shockSpacing = 1.05,
   shockDecay = 0.10,
-  turbulence = 0.28,
-  flowSpeed = 2.6,
+  turbulence = 0.5,
+  flowSpeed = 3.4,
   exposure = 0.75,
   still = false,
 }: PlumeTuning) {
@@ -400,21 +406,34 @@ export function RocketPlume({
   className,
   style,
   orientation = "horizontal",
+  zoom = 1,
   ...tuning
 }: PlumeTuning & {
   className?: string
   style?: React.CSSProperties
   /** "horizontal" fires left-to-right across the viewport; "vertical" fires downward */
   orientation?: "horizontal" | "vertical"
+  /** >1 pulls the camera in, making the plume fill more of the frame */
+  zoom?: number
 }) {
   const prefersReducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   const still = tuning.still ?? prefersReducedMotion
 
   const horizontal = orientation === "horizontal"
-  const view = horizontal
-    ? { position: [3.2, 0.9, 9.6] as [number, number, number], target: [3.2, -0.1, 0] as [number, number, number], fov: 42 }
-    : { position: [3.6, -0.4, 7.8] as [number, number, number], target: [0, -2.9, 0] as [number, number, number], fov: 42 }
+  // camera sits at target + offset/zoom, so zoom scales apparent size directly
+  const base = horizontal
+    ? { target: [3.0, -0.05, 0], offset: [0.2, 0.7, 6.6], fov: 40 }
+    : { target: [0, -2.9, 0], offset: [3.6, 2.5, 7.8], fov: 42 }
+  const view = {
+    target: base.target as [number, number, number],
+    fov: base.fov,
+    position: [
+      base.target[0] + base.offset[0] / zoom,
+      base.target[1] + base.offset[1] / zoom,
+      base.target[2] + base.offset[2] / zoom,
+    ] as [number, number, number],
+  }
 
   return (
     // an unsized parent gives the Canvas zero height and renders nothing at all,
