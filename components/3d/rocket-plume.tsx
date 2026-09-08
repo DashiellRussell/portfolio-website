@@ -90,8 +90,8 @@ const fragmentShader = /* glsl */ `
     float R0 = 0.30 + 0.07 * uThrottle;
     shockEnv = exp(-z * uShockDecay);
     phase = zc * TAU / max(uShockSpacing, 0.05);
-    float spread = 1.0 + 0.10 * z + 0.022 * z * z;
-    return R0 * spread * (1.0 + 0.30 * shockEnv * cos(phase));
+    float spread = 1.0 + 0.035 * z + 0.004 * z * z;
+    return R0 * spread * (1.0 + 0.10 * shockEnv * cos(phase));
   }
 
   void sampleMedium(vec3 p, out float density, out float temp, out float blue) {
@@ -117,7 +117,7 @@ const fragmentShader = /* glsl */ `
     if (r > R * 2.4) return;
 
     // dissipate before the volume bound so the tail never shows a hard cut
-    float tail = smoothstep(8.2, 3.2, z);
+    float tail = smoothstep(9.4, 4.5, z);
 
     // turbulent shear layer: quiet in the core, torn at the edges, worse downstream.
     // eddy size scales with R so the plume coarsens as it expands.
@@ -132,11 +132,11 @@ const fragmentShader = /* glsl */ `
     float turb = (fbm(np * 2.6 + warp * 2.2) - 0.44) + 0.5 * (fbm(np * 6.5) - 0.44);
     float rEff = r + turb * uTurbulence * edge * grow * R * 1.6;
 
-    // sharp-ish boundary, otherwise the eddies smear into mush
-    float core = smoothstep(R, R * 0.78, rEff);
-    if (core <= 0.0) return;
+    float core = smoothstep(R, R * 0.80, rEff);
+    float halo = exp(-pow(max(0.0, rEff - R) / (0.5 * R + 0.05), 2.0)) * tail;
+    if (core <= 0.0 && halo < 0.02) return;
 
-    float axial = exp(-z * 0.34) * tail;
+    float axial = exp(-z * 0.13) * tail;
 
     // A shock cell is not just a bright disc. Each cell carries a lens-shaped
     // mach disc on the axis plus the oblique shocks that cross to make the X,
@@ -150,34 +150,40 @@ const fragmentShader = /* glsl */ `
     // thin shell on the barrel shock itself
     float shell = exp(-pow((r - R) / (0.09 * R + 0.010), 2.0)) * shockEnv;
 
-    density = (core * (1.0 + 2.6 * diamond) + shell * 0.5) * tail;
+    density = (core * (1.0 + 3.2 * diamond) + shell * 0.35) * tail + halo * 0.18 * (1.0 - core);
     density *= mix(0.6, 1.0, uThrottle);
 
-    temp = (axial * (0.5 + 0.5 * core) + 2.0 * diamond * exp(-z * 0.08) + 0.45 * shell) * tail;
-    temp = clamp(temp, 0.0, 2.4);
+    temp = (axial * (0.45 + 0.5 * core) + 2.6 * diamond * exp(-z * 0.05) + 0.3 * shell) * tail;
+    temp = clamp(temp, 0.0, 2.6);
 
     // Clean, fully burnt gas just off the throat glows blue-violet from radical
     // recombination; soot only starts radiating orange further downstream. The
     // first shock cells stay blue-tinged because they are reheated.
-    blue = core * (exp(-z * 1.15) + 0.35 * diamond * exp(-z * 0.7));
+    blue = core * exp(-z * 1.9);
+  }
+
+  // sooty (kerolox): incandescent carbon, orange through white
+  vec3 sootyRamp(float x) {
+    vec3 c = mix(vec3(0.55, 0.07, 0.01), vec3(1.00, 0.30, 0.04), smoothstep(0.00, 0.35, x));
+    c = mix(c, vec3(1.00, 0.64, 0.18), smoothstep(0.30, 0.68, x));
+    return mix(c, vec3(1.00, 0.94, 0.82), smoothstep(0.66, 1.00, x));
+  }
+
+  // clean (LOX/kerosene at high mixture ratio): no soot to glow orange, so the
+  // colour comes from excited radicals - magenta halo, violet body, white cores
+  vec3 cleanRamp(float x) {
+    vec3 c = mix(vec3(0.62, 0.16, 0.78), vec3(0.55, 0.35, 1.00), smoothstep(0.00, 0.30, x));
+    c = mix(c, vec3(0.80, 0.72, 1.00), smoothstep(0.28, 0.62, x));
+    return mix(c, vec3(1.00, 0.98, 1.00), smoothstep(0.60, 0.95, x));
   }
 
   vec3 emissionColor(float t, float blue) {
     float x = clamp(t / 1.6, 0.0, 1.0);
-    vec3 cool = vec3(0.55, 0.07, 0.01);
-    vec3 warm = vec3(1.00, 0.30, 0.04);
-    vec3 mid  = vec3(1.00, 0.64, 0.18);
-    vec3 hot  = vec3(1.00, 0.94, 0.82);
-    vec3 c = mix(cool, warm, smoothstep(0.00, 0.35, x));
-    c = mix(c, mid, smoothstep(0.30, 0.68, x));
-    c = mix(c, hot, smoothstep(0.66, 1.00, x));
-    // low soot = hydrolox, nearly colourless with a blue lean
-    vec3 lean = mix(vec3(0.45, 0.62, 1.00), vec3(1.0), smoothstep(0.5, 1.0, x));
-    c = mix(lean, c, uSoot);
+    vec3 c = mix(cleanRamp(x), sootyRamp(x), uSoot);
 
     // recombination glow near the exit plane
-    vec3 flameBlue = vec3(0.16, 0.42, 1.00);
-    vec3 violet = vec3(0.60, 0.42, 1.00);
+    vec3 flameBlue = vec3(0.20, 0.62, 1.00);
+    vec3 violet = vec3(0.72, 0.80, 1.00);
     vec3 b = mix(flameBlue, violet, smoothstep(0.45, 1.0, x));
     // sharp handoff - a linear blend between blue and orange just makes mauve
     c = mix(c, b, smoothstep(0.15, 0.70, blue * uBlueTint));
@@ -220,10 +226,10 @@ const fragmentShader = /* glsl */ `
       sampleMedium(p, d, temp, blue);
 
       if (d > 0.001) {
-        vec3 em = emissionColor(temp, blue) * pow(temp, 3.0) * 3.0;
+        vec3 em = emissionColor(temp, blue) * pow(temp, 2.2) * 2.2;
         acc += em * d * trans * dt;
         // cool gas is sooty and absorbs hard - that is what gives the dark edges
-        float absorb = mix(2.0, 6.0, uSoot) * (0.4 + 0.8 * (1.0 - clamp(temp, 0.0, 1.0)));
+        float absorb = mix(1.2, 6.0, uSoot) * (0.35 + 0.7 * (1.0 - clamp(temp, 0.0, 1.0)));
         trans *= exp(-d * dt * absorb);   // Beer-Lambert, so the plume self-occludes
         if (trans < 0.01) break;
       }
@@ -269,13 +275,13 @@ type PlumeTuning = {
 
 export function PlumeVolume({
   throttle = 0.85,
-  soot = 0.9,
+  soot = 0.08,
   blueTint = 0.85,
-  shockSpacing = 0.85,
-  shockDecay = 0.40,
-  turbulence = 1.15,
+  shockSpacing = 1.05,
+  shockDecay = 0.10,
+  turbulence = 0.28,
   flowSpeed = 2.6,
-  exposure = 0.55,
+  exposure = 0.75,
   still = false,
 }: PlumeTuning) {
   const mesh = useRef<THREE.Mesh>(null)
