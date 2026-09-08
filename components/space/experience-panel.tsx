@@ -4,6 +4,7 @@ import { assetExists } from "@/lib/content/assets"
 import { roleRange } from "@/lib/content/experiences"
 import { AsciiField } from "./ascii-field"
 import { SatelliteScene } from "./satellite-scene"
+import { RocketPlume } from "@/components/3d/rocket-plume"
 import { Copy } from "./copy"
 import { Cta } from "./cta"
 import { Reveal, ScrubScale } from "./scroll"
@@ -37,6 +38,10 @@ export function ExperiencePanel({
           <div className="relative h-full w-full bg-[var(--surface-sunken)]">
             <SatelliteScene />
           </div>
+        ) : experience.visual === "plume" ? (
+          <div className="relative h-full w-full bg-[var(--surface-sunken)]">
+            <RocketPlume />
+          </div>
         ) : hasImage ? (
           <ScrubScale className="h-full w-full overflow-hidden">
             <div className="relative h-full w-full">
@@ -60,7 +65,7 @@ export function ExperiencePanel({
           className="absolute inset-0"
           style={{
             background:
-              experience.visual === "satellite"
+              experience.visual === "satellite" || experience.visual === "plume"
                 ? "linear-gradient(to top, var(--background) 0%, color-mix(in oklab, var(--background) 70%, transparent) 16%, transparent 44%)"
                 : "linear-gradient(to top, var(--background) 4%, color-mix(in oklab, var(--background) 66%, transparent) 38%, transparent 82%)",
           }}

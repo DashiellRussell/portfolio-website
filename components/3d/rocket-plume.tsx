@@ -142,10 +142,11 @@ const fragmentShader = /* glsl */ `
     // mach disc on the axis plus the oblique shocks that cross to make the X,
     // converging on the barrel radius at the cell boundary.
     float u = fract(zc / max(uShockSpacing, 0.05) + 0.5);
-    float lens = max(0.0, 1.0 - abs(2.0 * u - 1.0) * 1.45);
-    float disc = smoothstep(R * 0.62 * lens, 0.0, r) * lens;
+    float lens = max(0.0, 1.0 - abs(2.0 * u - 1.0) * 1.25);
+    // discs shrink as the shock train decays, like the reference firing
+    float disc = smoothstep(R * 1.02 * lens * (0.45 + 0.55 * shockEnv), 0.0, r) * lens;
     float xArm = exp(-pow((r - R * 0.85 * (1.0 - lens)) / (0.055 * R + 0.008), 2.0)) * lens;
-    float diamond = shockEnv * (disc + 0.45 * xArm) * tail;
+    float diamond = shockEnv * (disc + 0.12 * xArm) * tail;
 
     // thin shell on the barrel shock itself
     float shell = exp(-pow((r - R) / (0.09 * R + 0.010), 2.0)) * shockEnv;
@@ -172,8 +173,8 @@ const fragmentShader = /* glsl */ `
   // clean (LOX/kerosene at high mixture ratio): no soot to glow orange, so the
   // colour comes from excited radicals - magenta halo, violet body, white cores
   vec3 cleanRamp(float x) {
-    vec3 c = mix(vec3(0.62, 0.16, 0.78), vec3(0.55, 0.35, 1.00), smoothstep(0.00, 0.30, x));
-    c = mix(c, vec3(0.80, 0.72, 1.00), smoothstep(0.28, 0.62, x));
+    vec3 c = mix(vec3(0.72, 0.20, 0.62), vec3(0.78, 0.44, 0.96), smoothstep(0.00, 0.30, x));
+    c = mix(c, vec3(0.92, 0.80, 1.00), smoothstep(0.28, 0.62, x));
     return mix(c, vec3(1.00, 0.98, 1.00), smoothstep(0.60, 0.95, x));
   }
 

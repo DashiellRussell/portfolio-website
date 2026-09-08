@@ -132,7 +132,7 @@ export const experiences: Experience[] = [
     name: "UNSW Rocketry",
     tagline: "TODO: one line — avionics for competition rockets.",
     zone: "ascent",
-    visual: "ascii",
+    visual: "plume",
     roles: [
       {
         title: "Avionics Engineer",

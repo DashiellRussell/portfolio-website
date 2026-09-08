@@ -30,7 +30,7 @@ export type Status =
   | "archived"
 
 /** Which hero visual an entry renders. */
-export type Visual = "ascii" | "satellite" | "none"
+export type Visual = "ascii" | "satellite" | "plume" | "none"
 
 export interface Spec {
   label: string
