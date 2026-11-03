@@ -1,27 +1,24 @@
-import { Hero } from "@/components/hero"
-import { About } from "@/components/about"
-import { Skills } from "@/components/skills"
-import { Insights } from "@/components/insights"
-import { Projects } from "@/components/projects"
-import { Experience } from "@/components/experience"
-import { Contact } from "@/components/contact"
-import { Footer } from "@/components/footer"
-import { Header } from "@/components/header"
-import { Preloader } from "@/components/preloader"
+import { Hero } from "@/components/space/hero"
+import { ExperiencePanel } from "@/components/space/experience-panel"
+import { ContactSection } from "@/components/space/contact-section"
+import { experiences } from "@/lib/content/experiences"
+import { assertContentComplete } from "@/lib/content/audit"
 
 export default function Home() {
+  // Surfaces unfilled copy during development; fails a production build.
+  assertContentComplete()
+
   return (
-    <main className="min-h-screen">
-      <Preloader />
-      <Header />
+    <>
       <Hero />
-      <About />
-      <Skills />
-      <Insights />
-      <Projects />
-      <Experience />
-      <Contact />
-      <Footer />
-    </main>
+
+      <div id="work">
+        {experiences.map((experience, i) => (
+          <ExperiencePanel key={experience.slug} experience={experience} index={i} />
+        ))}
+      </div>
+
+      <ContactSection />
+    </>
   )
 }

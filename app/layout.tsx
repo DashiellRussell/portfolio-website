@@ -1,51 +1,56 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Inter, Geist_Mono, Space_Grotesk, Space_Mono } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Archivo, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+
+import { ZoneProvider } from "@/components/space/zone-provider"
+import { SiteHeader } from "@/components/space/site-header"
+import { Preloader } from "@/components/space/preloader"
+import { SiteFooter } from "@/components/space/site-footer"
 import "./globals.css"
 
-const inter = Inter({
+/** Display: a grotesk that holds up at very large sizes and in all-caps. */
+const display = Archivo({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  variable: "--font-display",
+  display: "swap",
 })
 
-const geistMono = Geist_Mono({
+/** Mono carries all metadata: labels, specs, telemetry. */
+const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-geist-mono",
+  variable: "--font-mono-custom",
+  display: "swap",
 })
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
-})
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-space-mono",
-})
+// viewport-fit=cover lets the layout read env(safe-area-inset-*) so the
+// header and menu can keep clear of the notch and the home indicator
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#05070d",
+}
 
 export const metadata: Metadata = {
-  title: "Dashiell Russell - Portfolio",
+  title: {
+    default: "Dashiell Russell",
+    template: "%s",
+  },
   description:
-    "Building The Future - Portfolio of Dashiell Russell, showcasing engineering projects and technical expertise",
+    "Mechatronics & physics student at UNSW. Roboticist, rocket builder, and satellite engineer.",
+  openGraph: {
+    title: "Dashiell Russell",
+    description: "Mechatronics & physics student at UNSW. Roboticist, rocket builder, and satellite engineer.",
+    type: "website",
+    locale: "en_AU",
+  },
+  twitter: { card: "summary_large_image", title: "Dashiell Russell" },
   icons: {
     icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },
@@ -53,13 +58,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.className} font-sans antialiased`}>
-        {children}
+    // The site is dark-only by design — the ASCII field and zone accents are
+    // built for a dark ground and a light theme would undo both.
+    <html lang="en" className={`${display.variable} ${mono.variable}`}>
+      <body className="font-sans antialiased">
+        <Preloader />
+        <ZoneProvider initial="ascent">
+          <SiteHeader />
+          <main>{children}</main>
+          <SiteFooter />
+        </ZoneProvider>
         <Analytics />
       </body>
     </html>
