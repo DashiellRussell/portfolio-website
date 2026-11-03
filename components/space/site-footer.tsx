@@ -1,46 +1,86 @@
-import { ZoneSection } from "./zone-section"
+import Link from "next/link"
+import { experiences } from "@/lib/content/experiences"
 
-const LINKS = [
+const ELSEWHERE = [
   { label: "GitHub", href: "https://github.com/DashiellRussell" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/dashiell-russell-9973482a1" },
+  { label: "Instagram", href: "https://www.instagram.com/dashiell_russell/" },
   { label: "Email", href: "mailto:dashiell.russell@gmail.com" },
   { label: "Résumé", href: "/Dashiell Russell - Resume.pdf" },
 ]
 
+/** Site footer: who, where the work is, what I am doing now, and where else to find me. */
 export function SiteFooter() {
-  return (
-    <ZoneSection
-      zone="ground"
-      id="contact"
-      className="border-t"
-      style={{ borderColor: "var(--border)" }}
-    >
-      <div className="container-page py-[var(--section-y)]">
-        <p className="label label-accent mb-6">Contact</p>
-        <h2 className="headline mb-12 max-w-2xl">
-          Open to work on spacecraft electronics, avionics, and embedded systems.
-        </h2>
+  // current positions, straight from the content model
+  const now = experiences
+    .map((e) => ({ org: e.name, role: e.roles.find((r) => r.end === null) }))
+    .filter((x) => x.role && !x.role.title.startsWith("TODO"))
 
-        <div className="flex flex-wrap gap-4">
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              target={l.href.startsWith("http") ? "_blank" : undefined}
-              rel={l.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              className="border px-6 py-3 transition-colors hover:border-[var(--accent-dim)]"
-              style={{ borderColor: "var(--border-strong)" }}
-            >
-              <span className="label hover:text-[var(--accent)]">{l.label}</span>
-            </a>
-          ))}
+  const external = (href: string) => href.startsWith("http") || href.endsWith(".pdf")
+
+  return (
+    <footer className="border-t" style={{ borderColor: "var(--border)" }}>
+      <div className="container-page grid gap-12 py-16 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr_1fr]">
+        <div>
+          <p className="mb-3 text-[length:var(--step-1)] font-semibold uppercase tracking-tight">Dashiell Russell</p>
+          <p className="mb-4 max-w-xs leading-relaxed text-[var(--muted-foreground)]">
+            Mechatronics engineering and physics at UNSW. Spacecraft electronics, avionics, and robotics.
+          </p>
+          <p className="label" style={{ fontSize: "var(--step-0)", letterSpacing: "0.16em" }}>Sydney, Australia</p>
         </div>
 
-        <div className="rule mt-20 mb-6" />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <span className="label">Dashiell Russell — Sydney, Australia</span>
-          <span className="label">{new Date().getFullYear()}</span>
+        <nav aria-label="Work">
+          <p className="label label-accent mb-4">Work</p>
+          <ul className="grid gap-2.5">
+            {experiences.map((e) => (
+              <li key={e.slug}>
+                <Link href={`/#${e.slug}`} className="hover:text-[var(--accent)]">{e.name}</Link>
+              </li>
+            ))}
+            <li>
+              <Link href="/projects" className="hover:text-[var(--accent)]">All projects</Link>
+            </li>
+          </ul>
+        </nav>
+
+        <div>
+          <p className="label label-accent mb-4">Now</p>
+          <ul className="grid gap-3">
+            {now.map((n) => (
+              <li key={n.org}>
+                <span className="block">{n.role!.title}</span>
+                <span className="label">{n.org}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <nav aria-label="Elsewhere">
+          <p className="label label-accent mb-4">Elsewhere</p>
+          <ul className="grid gap-2.5">
+            {ELSEWHERE.map((l) => (
+              <li key={l.href}>
+                <a
+                  href={l.href}
+                  target={external(l.href) ? "_blank" : undefined}
+                  rel={external(l.href) ? "noopener noreferrer" : undefined}
+                  className="hover:text-[var(--accent)]"
+                >
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+
+      <div className="container-page">
+        <div className="rule" />
+        <div className="flex flex-wrap items-center justify-between gap-4 py-6">
+          <span className="label">© {new Date().getFullYear()} Dashiell Russell</span>
+          <a href="#top" className="label hover:text-[var(--accent)]">Back to top ↑</a>
         </div>
       </div>
-    </ZoneSection>
+    </footer>
   )
 }

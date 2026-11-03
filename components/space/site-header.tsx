@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { experiences } from "@/lib/content/experiences"
 
 /**
  * Fixed header. Transparent over the hero, then resolves into a solid bar once
@@ -10,7 +9,6 @@ import { experiences } from "@/lib/content/experiences"
  */
 export function SiteHeader() {
   const [solid, setSolid] = useState(false)
-  const projectCount = experiences.reduce((n, e) => n + e.projects.length, 0)
 
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > window.innerHeight * 0.6)
@@ -32,7 +30,7 @@ export function SiteHeader() {
     >
       <div className="container-page flex h-16 items-center justify-between">
         <Link href="/" className="label !text-[var(--foreground)] !tracking-[0.22em]">
-          D. RUSSELL
+          DASHIELL RUSSELL
         </Link>
 
         <nav className="flex items-center gap-6" aria-label="Primary">
@@ -45,14 +43,6 @@ export function SiteHeader() {
           <Link href="/#contact" className="label transition-colors hover:text-[var(--accent)]">
             Contact
           </Link>
-          <span
-            className="hidden h-3 w-px sm:block"
-            style={{ background: "var(--border-strong)" }}
-            aria-hidden="true"
-          />
-          <span className="label hidden sm:inline">
-            {String(projectCount).padStart(2, "0")}
-          </span>
         </nav>
       </div>
     </header>

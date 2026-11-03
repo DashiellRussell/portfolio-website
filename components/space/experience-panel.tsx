@@ -5,6 +5,11 @@ import { roleRange } from "@/lib/content/experiences"
 import { AsciiField } from "./ascii-field"
 import { SatelliteScene } from "./satellite-scene"
 import { RocketPlume } from "@/components/3d/rocket-plume"
+import { RoboticsBench } from "@/components/3d/robotics-bench"
+import { RocketRange } from "@/components/3d/rocket-range"
+import { RamsocScreens } from "@/components/3d/ramsoc-screens"
+import { OnScreen } from "./on-screen"
+import { DETAILS_LIVE } from "@/lib/content/flags"
 import { Copy } from "./copy"
 import { Cta } from "./cta"
 import { Reveal, ScrubScale } from "./scroll"
@@ -14,7 +19,8 @@ import { ZoneSection } from "./zone-section"
  * A full-bleed panel for one organisation.
  *
  * Leads with where the work happened and the role held there — the projects
- * live one level down. Minimal text by design: the panel's job is to make the
+ * live one level down. Every live visual sits in `OnScreen`, so only the panels
+ * near the viewport hold a canvas at all. Minimal text by design: the panel's job is to make the
  * reader open the page, not to summarise it.
  */
 export function ExperiencePanel({
@@ -30,17 +36,40 @@ export function ExperiencePanel({
   return (
     <ZoneSection
       zone={experience.zone}
-      className="group relative isolate flex min-h-[90svh] items-end overflow-hidden border-t"
+      id={experience.slug}
+      className="group relative isolate flex min-h-[100svh] items-end overflow-hidden border-t"
       style={{ borderColor: "var(--border)" }}
     >
       <div className="absolute inset-0 -z-10">
         {experience.visual === "satellite" ? (
           <div className="relative h-full w-full bg-[var(--surface-sunken)]">
-            <SatelliteScene />
+            <OnScreen>
+              <SatelliteScene />
+            </OnScreen>
           </div>
         ) : experience.visual === "plume" ? (
           <div className="relative h-full w-full bg-[var(--surface-sunken)]">
-            <RocketPlume zoom={1.9} />
+            <OnScreen>
+              <RocketPlume zoom={1.9} />
+            </OnScreen>
+          </div>
+        ) : experience.visual === "nozzle" ? (
+          <div className="relative h-full w-full bg-[var(--surface-sunken)]">
+            <OnScreen>
+              <RocketRange />
+            </OnScreen>
+          </div>
+        ) : experience.visual === "ramsoc" ? (
+          <div className="relative h-full w-full bg-[var(--surface-sunken)]">
+            <OnScreen>
+              <RamsocScreens />
+            </OnScreen>
+          </div>
+        ) : experience.visual === "robotics" ? (
+          <div className="relative h-full w-full bg-[var(--surface-sunken)]">
+            <OnScreen>
+              <RoboticsBench />
+            </OnScreen>
           </div>
         ) : hasImage ? (
           <ScrubScale className="h-full w-full overflow-hidden">
@@ -57,7 +86,9 @@ export function ExperiencePanel({
           </ScrubScale>
         ) : (
           <div className="relative h-full w-full bg-[var(--surface-sunken)]">
-            <AsciiField />
+            <OnScreen>
+              <AsciiField />
+            </OnScreen>
           </div>
         )}
 
@@ -65,7 +96,11 @@ export function ExperiencePanel({
           className="absolute inset-0"
           style={{
             background:
-              experience.visual === "satellite" || experience.visual === "plume"
+              experience.visual === "satellite" ||
+              experience.visual === "plume" ||
+              experience.visual === "nozzle" ||
+              experience.visual === "robotics" ||
+              experience.visual === "ramsoc"
                 ? "linear-gradient(to top, var(--background) 0%, color-mix(in oklab, var(--background) 70%, transparent) 16%, transparent 44%)"
                 : "linear-gradient(to top, var(--background) 4%, color-mix(in oklab, var(--background) 66%, transparent) 38%, transparent 82%)",
           }}
@@ -74,20 +109,10 @@ export function ExperiencePanel({
 
       <div className="container-page w-full pb-[clamp(3rem,7vw,6rem)] pt-[clamp(6rem,14vw,12rem)]">
         <div className="max-w-2xl">
-          <Reveal>
-            <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="label label-accent">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="label">
-                {experience.projects.length}{" "}
-                {experience.projects.length === 1 ? "project" : "projects"}
-              </span>
-            </div>
-          </Reveal>
-
           <Reveal delay={0.06}>
-            <h2 className="display mb-5">{experience.name}</h2>
+            <h2 className="display mb-5" style={{ fontWeight: 700 }}>
+              {experience.name}
+            </h2>
           </Reveal>
 
           <Reveal delay={0.12}>
@@ -110,7 +135,16 @@ export function ExperiencePanel({
           </Reveal>
 
           <Reveal delay={0.18}>
-            <Cta href={`/work/${experience.slug}`}>Read more</Cta>
+            {DETAILS_LIVE ? (
+              <Cta href={`/work/${experience.slug}`}>Read more</Cta>
+            ) : (
+              <span
+                className="label inline-flex items-center gap-3 border px-7 py-4"
+                style={{ borderColor: "var(--border-strong)" }}
+              >
+                Details coming soon
+              </span>
+            )}
           </Reveal>
         </div>
       </div>

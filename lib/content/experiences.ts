@@ -3,8 +3,8 @@ import type { Experience } from "./types"
 /**
  * Where I have worked, newest and most significant first.
  *
- * Order on the home page is the order of this array. Spiral Blue and UNSW
- * Rocketry lead deliberately — they are the space work.
+ * Order on the home page is the order of this array. Spiral Blue leads, then
+ * Phase Robotics, then the rest of the space work.
  *
  * IMPORTANT: strings beginning with "TODO:" are unverified placeholders. They
  * render with a visible marker in development and fail the production build
@@ -17,7 +17,7 @@ export const experiences: Experience[] = [
   {
     slug: "spiral-blue",
     name: "Spiral Blue",
-    tagline: "TODO: one line on what Spiral Blue does.",
+    tagline: "Flight hardware and software for Sapphire V2 — the spacecraft MCU board and the code that runs on it.",
     zone: "orbit",
     visual: "satellite",
     roles: [
@@ -126,13 +126,78 @@ export const experiences: Experience[] = [
     links: [],
   },
 
+  // ----------------------------------------------------------- Phase Robotics
+  {
+    slug: "phase-robotics",
+    name: "Phase Robotics",
+    tagline: "Robotic arms, stator winders, and robotics simulation and automation.",
+    zone: "deep",
+    visual: "robotics",
+    roles: [
+      {
+        title: "CTO",
+        start: "Jan 2026",
+        end: null,
+        bullets: ["TODO: what you are responsible for as CTO."],
+      },
+    ],
+    summary: "TODO: what Phase Robotics is and how the projects relate to each other.",
+    projects: [
+      {
+        slug: "motor-winder",
+        name: "Motor winder",
+        tagline: "TODO: one line.",
+        category: "hardware",
+        status: "in-development",
+        summary: "TODO: why a custom winder was needed and what it produces.",
+        contributions: ["TODO: what you built."],
+        specs: [{ label: "Focus", value: "TODO" }],
+        sections: [{ heading: "Mechanism", body: ["TODO: how it works."] }],
+        links: [],
+      },
+      {
+        slug: "robot-arm",
+        name: "Robot arm",
+        tagline: "TODO: one line.",
+        category: "hardware",
+        status: "in-development",
+        summary: "TODO: the arm's purpose and design.",
+        contributions: ["TODO: which parts are yours."],
+        specs: [{ label: "DOF", value: "TODO" }],
+        sections: [
+          { heading: "Design", body: ["TODO: mechanics, actuation, control approach."] },
+        ],
+        links: [],
+      },
+      {
+        slug: "isaac-sim",
+        name: "Isaac Sim",
+        tagline: "TODO: one line.",
+        category: "software",
+        status: "research",
+        summary: "TODO: what you simulated and why.",
+        contributions: ["TODO: what you modelled and what it told you."],
+        specs: [{ label: "Tool", value: "NVIDIA Isaac Sim" }],
+        sections: [
+          {
+            heading: "Simulation",
+            body: ["TODO: what the sim told you that hardware could not."],
+          },
+        ],
+        links: [],
+      },
+    ],
+    sections: [],
+    links: [],
+  },
+
   // ------------------------------------------------------------- UNSW Rocketry
   {
     slug: "unsw-rocketry",
     name: "UNSW Rocketry",
-    tagline: "TODO: one line — avionics for competition rockets.",
+    tagline: "Avionics for competition rockets — flight computers, telemetry, and battery management.",
     zone: "ascent",
-    visual: "plume",
+    visual: "nozzle",
     roles: [
       {
         title: "Avionics Engineer",
@@ -211,52 +276,13 @@ export const experiences: Experience[] = [
     links: [],
   },
 
-  // ------------------------------------------------------------------- BlueSat
-  {
-    slug: "bluesat",
-    name: "BlueSat",
-    tagline: "TODO: one line on BlueSat and which project you are on.",
-    zone: "deep",
-    visual: "ascii",
-    roles: [
-      {
-        title: "TODO: your role",
-        start: "TODO",
-        end: null,
-        bullets: ["TODO: what you do on the team."],
-      },
-    ],
-    summary: "TODO: what BlueSat is and what you contribute.",
-    projects: [
-      {
-        slug: "owr",
-        name: "TODO: project name",
-        tagline: "TODO: one line.",
-        category: "software",
-        status: "in-development",
-        summary: "TODO: what the project is.",
-        contributions: ["TODO: your specific contributions."],
-        specs: [
-          { label: "Language", value: "Rust" },
-          { label: "Target", value: "TODO" },
-        ],
-        sections: [
-          { heading: "Overview", body: ["TODO: architecture and your part in it."] },
-        ],
-        links: [],
-      },
-    ],
-    sections: [],
-    links: [],
-  },
-
   // ------------------------------------------------------------------- RAMSOC
   {
     slug: "ramsoc",
     name: "RAMSOC",
     tagline: "Digital infrastructure for UNSW Robotics and Mechatronics Society.",
     zone: "ground",
-    visual: "none",
+    visual: "ramsoc",
     roles: [
       {
         title: "IT Director",
@@ -295,118 +321,6 @@ export const experiences: Experience[] = [
     links: [],
   },
 
-  // ----------------------------------------------------------- Phase Robotics
-  {
-    slug: "phase-robotics",
-    name: "Phase Robotics",
-    tagline: "TODO: one line covering the motor winder, the arm, and the sim work.",
-    zone: "deep",
-    visual: "none",
-    roles: [
-      {
-        title: "TODO: your role",
-        start: "TODO",
-        end: null,
-        bullets: ["TODO: what you are responsible for."],
-      },
-    ],
-    summary: "TODO: what Phase Robotics is and how the projects relate to each other.",
-    projects: [
-      {
-        slug: "motor-winder",
-        name: "Motor winder",
-        tagline: "TODO: one line.",
-        category: "hardware",
-        status: "in-development",
-        summary: "TODO: why a custom winder was needed and what it produces.",
-        contributions: ["TODO: what you built."],
-        specs: [{ label: "Focus", value: "TODO" }],
-        sections: [{ heading: "Mechanism", body: ["TODO: how it works."] }],
-        links: [],
-      },
-      {
-        slug: "robot-arm",
-        name: "Robot arm",
-        tagline: "TODO: one line.",
-        category: "hardware",
-        status: "in-development",
-        summary: "TODO: the arm's purpose and design.",
-        contributions: ["TODO: which parts are yours."],
-        specs: [{ label: "DOF", value: "TODO" }],
-        sections: [
-          { heading: "Design", body: ["TODO: mechanics, actuation, control approach."] },
-        ],
-        links: [],
-      },
-      {
-        slug: "isaac-sim",
-        name: "Isaac Sim",
-        tagline: "TODO: one line.",
-        category: "software",
-        status: "research",
-        summary: "TODO: what you simulated and why.",
-        contributions: ["TODO: what you modelled and what it told you."],
-        specs: [{ label: "Tool", value: "NVIDIA Isaac Sim" }],
-        sections: [
-          {
-            heading: "Simulation",
-            body: ["TODO: what the sim told you that hardware could not."],
-          },
-        ],
-        links: [],
-      },
-    ],
-    sections: [],
-    links: [],
-  },
-
-  // ------------------------------------------------------------------ Research
-  {
-    slug: "risley-prisms",
-    name: "Risley Prisms",
-    // TODO: confirm which organisation this sat under, and move it there if it
-    // belongs to one of the entries above.
-    tagline: "TODO: one line on what the demo shows.",
-    zone: "deep",
-    visual: "none",
-    roles: [
-      {
-        title: "TODO: your role",
-        start: "TODO",
-        end: null,
-        bullets: ["TODO: what you built, derived, or demonstrated."],
-      },
-    ],
-    summary:
-      "TODO: what a Risley prism pair does, why it is useful for beam steering, and what your demo demonstrates.",
-    projects: [
-      {
-        slug: "risley-demo",
-        name: "Beam-steering demo",
-        tagline: "TODO: one line.",
-        category: "research",
-        status: "research",
-        summary: "TODO: what the demo shows.",
-        contributions: ["TODO: your contribution."],
-        specs: [
-          { label: "Method", value: "TODO" },
-          { label: "Outcome", value: "TODO" },
-        ],
-        sections: [
-          {
-            heading: "Background",
-            body: [
-              "TODO: the optics — counter-rotating wedge prisms, the steering envelope, and where it beats a gimbal.",
-            ],
-          },
-          { heading: "The demo", body: ["TODO: what you built and what it showed."] },
-        ],
-        links: [],
-      },
-    ],
-    sections: [],
-    links: [],
-  },
 ]
 
 export function getExperience(slug: string): Experience | undefined {

@@ -4,129 +4,167 @@ import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 
 /**
- * Initial load sequence — a pre-launch checklist that resolves into the site.
+ * Initial load sequence: a three-count inside an orbit ring that draws
+ * itself while the systems come up line by line, then the name assembles,
+ * then ignition — a bright line across the middle and the screen parting
+ * along it to reveal the site.
  *
- * Runs on every full page load (not on client-side navigation, since the
- * component only mounts once inside the root layout). Under reduced-motion it
- * resolves immediately rather than holding the reader on a splash.
+ * Driven by one rAF clock rather than chained timeouts: the first load is
+ * busy (hydration, the hero canvases starting up) and timers fire late
+ * there, which froze the count. Reading elapsed time each frame means a
+ * stall only drops frames; the sequence still plays in full and in order.
+ *
+ * Mounts once in the root layout, so client navigation never replays it.
+ * Under reduced motion it resolves immediately.
  */
 
-const LINES = [
-  "POWER BUS ......... NOMINAL",
-  "IMU CALIBRATION ... COMPLETE",
-  "TELEMETRY LINK .... ACQUIRED",
-  "FLIGHT SOFTWARE ... ARMED",
-  "RANGE SAFETY ...... GO",
+const SYSTEMS = [
+  "CAD models ........ loaded",
+  "Nozzle solver ..... ready",
+  "Shaders ........... compiled",
+  "Stator winder ..... indexed",
+  "Telemetry ......... nominal",
 ]
 
-const LINE_MS = 190
-const HOLD_MS = 260
+// timeline, ms
+const T = { count: 2100, name: 2100 + 650, ignite: 2100 + 650 + 750 }
+const END = T.ignite + 700
+const NAME = "DASHIELL RUSSELL"
 
 export function Preloader() {
+  const [ms, setMs] = useState(0)
   const [done, setDone] = useState(false)
-  const [shown, setShown] = useState(0)
-  const [pct, setPct] = useState(0)
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const start = useRef<number | null>(null)
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (reduced) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setDone(true)
       return
     }
-
-    // Lock scroll while the sequence runs so the reader lands at the top.
-    const prevOverflow = document.body.style.overflow
+    const prev = document.body.style.overflow
     document.body.style.overflow = "hidden"
-
-    LINES.forEach((_, i) => {
-      timers.current.push(setTimeout(() => setShown(i + 1), i * LINE_MS))
-    })
-
-    const total = LINES.length * LINE_MS
-    const start = performance.now()
     let raf = 0
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / total)
-      setPct(Math.floor(p * 100))
-      if (p < 1) raf = requestAnimationFrame(tick)
+    const tick = (now: number) => {
+      if (start.current === null) start.current = now
+      const e = now - start.current
+      setMs(e)
+      if (e >= T.ignite) document.body.style.overflow = prev
+      if (e >= END) setDone(true)
+      else raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-
-    timers.current.push(setTimeout(() => setDone(true), total + HOLD_MS))
-
     return () => {
       cancelAnimationFrame(raf)
-      timers.current.forEach(clearTimeout)
-      timers.current = []
-      document.body.style.overflow = prevOverflow
+      document.body.style.overflow = prev
     }
   }, [])
 
-  // Restore scrolling as soon as the overlay starts leaving.
-  useEffect(() => {
-    if (done) document.body.style.overflow = ""
-  }, [done])
+  const counting = ms < T.count
+  const count = 3 - Math.min(2, Math.floor((ms / T.count) * 3))
+  const ring = Math.min(1, ms / T.count)
+  const systemsUp = Math.min(SYSTEMS.length, Math.floor((ms / T.count) * (SYSTEMS.length + 0.6)))
+  const naming = ms >= T.count
+  const igniting = ms >= T.ignite
+  const ease = [0.7, 0, 0.2, 1] as const
 
   return (
     <AnimatePresence>
       {!done && (
-        <motion.div
-          key="preloader"
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          style={{ background: "var(--background)" }}
-          initial={{ opacity: 1 }}
-          // The zone provider mounts after this and rewrites --accent, so the
-          // preloader pins its own colour instead of following the live one —
-          // otherwise the text visibly sweeps cyan to orange mid-sequence.
-          exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
-          aria-hidden="true"
-        >
-          <div className="container-page">
-            <div className="mx-auto max-w-md">
-              <div className="mb-8 flex items-baseline justify-between">
-                <span className="label" style={{ color: "var(--zone-ascent)" }}>
-                  Pre-launch
-                </span>
-                <span
-                  className="font-mono tabular-nums"
-                  style={{ fontSize: "var(--step-2)", color: "var(--foreground)" }}
-                >
-                  {String(pct).padStart(3, "0")}
-                </span>
-              </div>
+        <motion.div key="preloader" className="pointer-events-none fixed inset-0 z-[100]" aria-hidden="true">
+          {(["top", "bottom"] as const).map((side) => (
+            <motion.div
+              key={side}
+              className="absolute inset-x-0"
+              style={{ background: "var(--background)", [side]: 0, height: "50.5%" }}
+              animate={igniting ? { y: side === "top" ? "-100%" : "100%" } : { y: 0 }}
+              transition={{ duration: 0.62, ease, delay: 0.08 }}
+            />
+          ))}
 
-              <ul className="space-y-2">
-                {LINES.map((line, i) => (
+          <motion.div
+            className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2"
+            style={{ background: "var(--zone-ascent)", boxShadow: "0 0 24px 4px color-mix(in oklab, var(--zone-ascent) 70%, transparent)" }}
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={igniting ? { scaleX: 1, opacity: [0, 1, 1, 0] } : { scaleX: 0, opacity: 0 }}
+            transition={{ duration: 0.7, ease, times: [0, 0.15, 0.6, 1] }}
+          />
+
+          <motion.div
+            className="absolute inset-0 flex flex-col items-center justify-center px-6"
+            animate={{ opacity: igniting ? 0 : 1 }}
+            transition={{ duration: 0.18 }}
+          >
+            <div className="relative flex h-36 w-36 items-center justify-center sm:h-40 sm:w-40">
+              <svg className="absolute inset-0" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="var(--border-strong)" strokeWidth="0.6" />
+                <circle
+                  cx="50" cy="50" r="46" fill="none"
+                  stroke="var(--zone-ascent)" strokeWidth="1.2" strokeLinecap="round"
+                  pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - ring}
+                  transform="rotate(-90 50 50)"
+                />
+                <g transform={`rotate(${ring * 360 - 90} 50 50)`}>
+                  <circle cx="96" cy="50" r="2" fill="var(--foreground)" />
+                </g>
+              </svg>
+              {/* re-keyed each count: the entrance replays, no exit to wait on */}
+              {counting ? (
+                  <motion.span
+                    key={count}
+                    className="font-mono tabular-nums"
+                    style={{ fontSize: "var(--step-3)", color: "var(--foreground)" }}
+                    initial={{ opacity: 0, scale: 1.35, filter: "blur(6px)" }}
+                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    T−0{count}
+                  </motion.span>
+                ) : (
+                  <motion.span key="lift" className="label" style={{ color: "var(--zone-ascent)" }} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+                    Liftoff
+                  </motion.span>
+                )}
+            </div>
+
+            {/* systems coming up, then the name in the same slot */}
+            <div className="relative mt-8 h-[8.5rem] w-full max-w-sm">
+              <motion.ul
+                className="absolute inset-0 space-y-1.5"
+                animate={{ opacity: naming ? 0 : 1, y: naming ? -8 : 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                {SYSTEMS.map((line, i) => (
                   <li
                     key={line}
                     className="font-mono transition-opacity duration-200"
                     style={{
                       fontSize: "var(--step--1)",
-                      letterSpacing: "0.08em",
-                      opacity: i < shown ? 1 : 0.12,
-                      color: i < shown ? "var(--foreground)" : "var(--subtle)",
+                      letterSpacing: "0.06em",
+                      opacity: i < systemsUp ? 1 : 0.14,
+                      color: i < systemsUp ? "var(--foreground)" : "var(--subtle)",
                     }}
                   >
                     {line}
                   </li>
                 ))}
-              </ul>
+              </motion.ul>
 
-              {/* Progress rule */}
-              <div
-                className="mt-8 h-px w-full overflow-hidden"
-                style={{ background: "var(--border)" }}
-              >
-                <motion.div
-                  className="h-full"
-                  style={{ background: "var(--zone-ascent)" }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ ease: "linear", duration: 0.08 }}
-                />
+              <div className="absolute inset-x-0 top-6 flex justify-center overflow-hidden" style={{ fontSize: "var(--step-1)" }}>
+                {NAME.split("").map((ch, i) => (
+                  <motion.span
+                    key={i}
+                    className="inline-block font-semibold tracking-[0.18em]"
+                    style={{ color: "var(--foreground)", width: ch === " " ? "0.6em" : undefined }}
+                    initial={{ y: "120%" }}
+                    animate={naming ? { y: 0 } : { y: "120%" }}
+                    transition={{ duration: 0.4, ease, delay: i * 0.024 }}
+                  >
+                    {ch}
+                  </motion.span>
+                ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nozzle startup: axisymmetric Euler simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --frost:#a9cbe4; --ink:#d9dde3; --ink-dim:#8a919b;
+    --glass:rgba(14,17,21,.7); --edge:rgba(169,203,228,.14);
+    --font:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#07080a;overflow:hidden;color:var(--ink);font-family:var(--font)}
+  canvas{display:block;width:100%;height:100%}
+
+  #legend{position:absolute;display:flex;gap:28px;align-items:flex-end;font-size:12.5px;color:var(--ink-dim);pointer-events:none;flex-wrap:wrap}
+  .lg{display:flex;align-items:center;gap:8px}
+  .lg .nm{color:var(--ink)}
+  .lg .bar{width:110px;height:7px;border-radius:2px}
+  .lg .v{font-variant-numeric:tabular-nums}
+  #clock{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums}
+
+  #ui{
+    position:absolute;left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 22px;padding:12px 16px;
+    border:1px solid var(--edge);border-radius:12px;background:var(--glass);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-size:13px;
+  }
+  #ui.hidden{display:none}
+  .g{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .g>span{color:var(--ink-dim)}
+  .g>span b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+  .row{display:flex;gap:8px}
+  button.b{font:inherit;font-weight:500;font-size:13px;padding:8px 14px;border-radius:7px;cursor:pointer;
+    color:var(--ink);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1)}
+  button.b:hover{background:rgba(255,255,255,.08)}
+  button.fire{background:var(--frost);color:#0c1720;border-color:var(--frost);font-weight:600;min-width:92px}
+  button.fire:hover{background:#c3dcef}
+  select{font:inherit;font-size:13px;color:var(--ink);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+    border-radius:7px;padding:7px 26px 7px 10px;-webkit-appearance:none;appearance:none;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
+    background-position:calc(100% - 13px) 50%,calc(100% - 9px) 50%;background-size:4px 4px;background-repeat:no-repeat}
+  select option{background:#14181d}
+  input[type=range]{width:180px;-webkit-appearance:none;appearance:none;background:transparent;height:20px;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;background:linear-gradient(90deg,var(--frost) var(--p,50%),rgba(255,255,255,.14) var(--p,50%));border-radius:2px}
+  input[type=range]::-moz-range-track{height:3px;background:rgba(255,255,255,.14);border-radius:2px}
+  input[type=range]::-moz-range-progress{height:3px;background:var(--frost)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#e9f2f9;margin-top:-5.5px;border:0}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#e9f2f9;border:0}
+  .ro{display:flex;gap:18px;margin-left:auto;align-items:flex-end}
+  .ro .g b{font-size:15px}
+  #regime{color:var(--frost);max-width:250px;line-height:1.3}
+  .icon{background:none;border:0;color:var(--ink-dim);font:inherit;font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;align-self:flex-start}
+  .icon:hover{color:var(--ink)}
+  #show{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:none}
+  #show.vis{display:block}
+  :focus-visible{outline:2px solid var(--frost);outline-offset:2px}
+  #msg{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:var(--ink-dim)}
+  @media (max-width:640px){
+    #ui{gap:10px 14px;padding:10px 12px}
+    input[type=range]{width:140px}
+    .ro{margin-left:0;width:100%;justify-content:space-between}
+    #regime{max-width:none}
+    #legend{gap:10px 18px}
+    .lg .bar{width:70px}
+  }
+  /* ---- mobile: full-screen sim, settings in a sheet behind the ⋯ button ---- */
+  #fabs, #sheetH, #scrim{display:none}
+  .fab{width:42px;height:42px;border-radius:50%;border:1px solid var(--edge);background:var(--glass);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+  .fab svg{width:20px;height:20px}
+  body.mobile #fabs{display:flex;gap:8px;position:absolute;z-index:5;
+    top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+  body.mobile #ui{display:none;position:fixed;z-index:7;left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));
+    top:auto;bottom:max(8px,env(safe-area-inset-bottom));max-height:80vh;overflow:auto;
+    grid-template-columns:1fr 1fr;gap:16px 14px;padding:14px 16px 18px;border-radius:16px;background:rgba(14,17,21,.92)}
+  body.mobile.menu-open #ui{display:grid}
+  body.mobile.menu-open #scrim{display:block;position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.4)}
+  body.mobile #sheetH{display:flex;grid-column:1/-1;justify-content:space-between;align-items:center;font-size:15px;font-weight:600}
+  body.mobile #sheetH .icon{font-size:24px;padding:2px 8px}
+  body.mobile #ui .full{grid-column:1/-1}
+  body.mobile #ui .row button{flex:1;padding:11px}
+  body.mobile #ui select{width:100%;padding:10px 26px 10px 10px;font-size:14px}
+  body.mobile #ui input[type=range]{width:100%;height:28px}
+  body.mobile .ro{grid-column:1/-1;margin:0;width:auto;justify-content:space-between;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+  body.mobile #hide, body.mobile #show{display:none !important}
+  body.mobile #legend{gap:6px 14px;flex-direction:column;align-items:flex-start;font-size:12px}
+  body.mobile #legend #clock{margin-left:0}
+  body.mobile .lg .bar{width:54px}
+  .lg span{white-space:nowrap}
+  body.embed #ui, body.embed #show, body.embed #fabs{display:none !important}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="msg"></div>
+
+<div id="legend" aria-hidden="true">
+  <div class="lg" id="lgA"><span class="nm"></span><span class="v lo"></span><span class="bar"></span><span class="v hi"></span></div>
+  <div class="lg" id="lgB"><span class="nm"></span><span class="v lo"></span><span class="bar"></span><span class="v hi"></span></div>
+  <span id="clock">t = 0.00 ms</span>
+</div>
+
+<div id="fabs">
+  <button class="fab" id="restart" aria-label="Restart ignition"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+  <button class="fab" id="menu" aria-label="Settings" aria-expanded="false" aria-controls="ui"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+</div>
+<div id="scrim"></div>
+<div id="ui" role="region" aria-label="Simulation controls">
+  <div id="sheetH"><span>Settings</span><button class="icon" id="close" aria-label="Close settings">&times;</button></div>
+  <div class="g full"><span>Engine</span>
+    <div class="row"><button class="b fire" id="fire">Ignite</button><button class="b" id="pause" aria-pressed="false">Pause</button></div>
+  </div>
+  <div class="g full"><span>Chamber pressure <b id="p0V">16× ambient</b></span>
+    <input type="range" id="p0" min="6" max="120" step="1" value="16" aria-label="Chamber pressure">
+  </div>
+  <div class="g"><span id="lblTop">Upper half</span>
+    <select id="fTop" aria-label="Upper half field"></select></div>
+  <div class="g"><span id="lblBot">Lower half</span>
+    <select id="fBot" aria-label="Lower half field"></select></div>
+  <div class="g" id="visG"><span>Propellant</span>
+    <select id="prop" aria-label="Propellant for visual render">
+      <option value="kerolox">RP‑1 / LOX</option><option value="methalox">CH₄ / LOX</option><option value="hydrolox">LH₂ / LOX</option>
+    </select></div>
+  <div class="g" id="expG"><span>Exposure <b id="expoV">0 EV</b></span>
+    <input type="range" id="expo" min="-2" max="2" step="0.1" value="0" aria-label="Exposure"></div>
+  <div class="g"><span>Turbulence <b id="turbV">50%</b></span>
+    <input type="range" id="turb" min="0" max="100" step="5" value="50" aria-label="Turbulence"></div>
+  <div class="g"><span>Grid</span>
+    <select id="res" aria-label="Grid resolution">
+      <option value="low">Coarse</option><option value="med">Medium</option><option value="high">Fine</option>
+    </select></div>
+  <div class="g"><span>Speed</span>
+    <select id="spd" aria-label="Playback speed">
+      <option value="12">Slow motion</option><option value="48" selected>Normal</option><option value="120">Fast</option><option value="300">Maximum</option>
+    </select></div>
+  <div class="ro">
+    <div class="g"><span>Exit Mach</span><b id="rMe">–</b></div>
+    <div class="g"><span>p<sub>e</sub>/p<sub>a</sub></span><b id="rN">–</b></div>
+    <div class="g" id="regime">Ambient air at rest</div>
+  </div>
+  <button class="icon" id="hide" title="Hide controls (H)" aria-label="Hide controls">&minus;</button>
+</div>
+<button class="b" id="show">Show controls</button>
+
+<script>
+(() => {
+"use strict";
+/* URL options: ?turb=0-100  ?embed  ?loop=0  ?p0=120  ?top=visual|mach|temp|schlieren|pressure  ?bottom=...  ?prop=kerolox|methalox|hydrolox  ?res=low|med|high  ?speed=4|16|48
+ *   ?horizontal  always fire sideways, never rotate to portrait
+ *   ?clean       no axis dashes or frame line; window edges fade into the background
+ *   ?lite        half the glow ray samples and 1x pixel ratio, for slower GPUs
+ *   ?bg=05070d   background colour (hex), to sit flush in a host page
+ *   ?fps=55      frame rate the step governor aims for (lower = more steps on slow pages)
+ *   ?minspf=1    floor on solver steps per frame, so a slow page never stalls the flow
+ *   ?warm=0.9    on ignition, run this many sim units in fast batches before settling
+ *   ?flushleft   fill the full width from the left edge (scale to width, centre vertically)
+ *   ?frost=0.8   cryogenic rime on the injector end of the engine (visual mode)
+ *   ?flow=0.4    drive the glow's flicker from the wall clock at this rate (sim units/s), so the
+ *                flame churns in real time even though the solver runs ~1000x slow motion */
+const Q=new URLSearchParams(location.search);
+const EMBED=Q.has('embed'); if(EMBED) document.body.classList.add('embed');
+const FLUSH=Q.has('flushleft');
+const LOOP=EMBED ? Q.get('loop')!=='0' : Q.get('loop')==='1';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function fail(m){ const e=$('msg'); e.textContent=m; e.style.display='grid'; $('ui').style.display='none'; $('legend').style.display='none'; }
+
+const canvas=$('c');
+const gl=canvas.getContext('webgl2',{antialias:false,alpha:false,depth:false,stencil:false,powerPreference:'high-performance'});
+if(!gl) return fail('This simulation needs WebGL 2. Try a recent Chrome, Firefox or Safari.');
+if(!gl.getExtension('EXT_color_buffer_float')) return fail('This simulation needs floating-point render targets, which this browser or GPU does not support.');
+
+/* =============================== geometry ===============================
+ * Units: lengths in domain units, ambient p = rho = 1, gamma = 1.3.
+ * Bell nozzle, area ratio ~5, chamber gas 4x ambient temperature.       */
+const GEO=`
+const float GAM=1.3;
+const float XC0=0.03, XC1=0.17, XT=0.25, XE=0.50, RC=0.095, RT=0.043, RE=0.096, WALL=0.018, XR=0.07;
+float nozR(float x){
+  if(x<XC1) return RC;
+  if(x<XT){ float k=(x-XC1)/(XT-XC1); k=k*k*(3.0-2.0*k); return mix(RC,RT,k); }
+  float k=clamp((x-XT)/(XE-XT),0.0,1.0); return RT+(RE-RT)*(1.0-(1.0-k)*(1.0-k));
+}
+bool solidAt(vec2 p){
+  if(p.x<XC0) return p.y<RC+WALL;
+  if(p.x<=XE){ float R=nozR(p.x); return p.y>R && p.y<R+WALL; }
+  return false;
+}
+bool reservoirAt(vec2 p){ return p.x>=XC0 && p.x<XR && p.y<RC; }
+`;
+const RT_=0.043, RE_=0.096, G_=1.3;
+
+const VS=`#version 300 es
+void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2)); gl_Position=vec4(p*2.0-1.0,0.0,1.0); }`;
+
+/* ============================ solver library ============================ */
+const SIMLIB=`#version 300 es
+precision highp float; precision highp int;
+uniform sampler2D uS; uniform ivec2 uN; uniform float uH;
+${GEO}
+vec4 toPrim(vec4 u){ float r=max(u.x,1e-5); vec2 v=u.yz/r; float p=max((GAM-1.0)*(u.w-0.5*r*dot(v,v)),1e-5); return vec4(r,v,p); }
+vec4 toCons(vec4 W){ return vec4(W.x,W.x*W.y,W.x*W.z,W.w/(GAM-1.0)+0.5*W.x*(W.y*W.y+W.z*W.z)); }
+// ghost handling: below the axis -> mirror; outside x / above top -> zero-gradient
+vec4 getP(ivec2 c){
+  bool m=false;
+  if(c.y<0){ c.y=-c.y-1; m=true; }
+  c=clamp(c,ivec2(0),uN-1);
+  vec4 W=toPrim(texelFetch(uS,c,0));
+  if(m) W.z=-W.z;
+  return W;
+}
+bool isSolid(ivec2 c){
+  if(c.y<0||c.x<0||c.x>=uN.x||c.y>=uN.y) return false;
+  return solidAt((vec2(c)+0.5)*uH);
+}
+`;
+
+const FS_INIT=SIMLIB+`
+out vec4 o; void main(){ o=toCons(vec4(1.0,0.0,0.0,1.0)); }`;
+
+/* One SSP-RK2 stage: o = A*U0 + B*(U + dt*L(U)), L = HLLC + MUSCL(van Leer) */
+const FS_STEP=SIMLIB+`
+uniform sampler2D uS0; uniform float uDt, uA, uB, uP0, uT0, uTime, uTurb;
+float h3(vec3 p){ p=fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float vnoise(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.0-2.0*f);
+  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+out vec4 o;
+vec4 vl(vec4 a, vec4 b){ return (a*abs(b)+abs(a)*b)/(abs(a)+abs(b)+1e-20); }
+vec4 mirrorW(vec4 W,int ax){ if(ax==0) W.y=-W.y; else W.z=-W.z; return W; }
+vec4 physF(vec4 W,float E){ return vec4(W.x*W.y, W.x*W.y*W.y+W.w, W.x*W.y*W.z, W.y*(E+W.w)); }
+vec4 hllc(vec4 L, vec4 R, int ax){
+  if(ax==1){ L=L.xzyw; R=R.xzyw; }
+  float EL=L.w/(GAM-1.0)+0.5*L.x*(L.y*L.y+L.z*L.z);
+  float ER=R.w/(GAM-1.0)+0.5*R.x*(R.y*R.y+R.z*R.z);
+  float cL=sqrt(GAM*L.w/L.x), cR=sqrt(GAM*R.w/R.x);
+  float SL=min(L.y-cL,R.y-cR), SR=max(L.y+cL,R.y+cR);
+  vec4 F;
+  if(SL>=0.0) F=physF(L,EL);
+  else if(SR<=0.0) F=physF(R,ER);
+  else{
+    float SM=(R.w-L.w+L.x*L.y*(SL-L.y)-R.x*R.y*(SR-R.y))/(L.x*(SL-L.y)-R.x*(SR-R.y));
+    if(SM>=0.0){
+      vec4 U=vec4(L.x,L.x*L.y,L.x*L.z,EL);
+      float f=L.x*(SL-L.y)/(SL-SM);
+      vec4 Us=f*vec4(1.0,SM,L.z,EL/L.x+(SM-L.y)*(SM+L.w/(L.x*(SL-L.y))));
+      F=physF(L,EL)+SL*(Us-U);
+    }else{
+      vec4 U=vec4(R.x,R.x*R.y,R.x*R.z,ER);
+      float f=R.x*(SR-R.y)/(SR-SM);
+      vec4 Us=f*vec4(1.0,SM,R.z,ER/R.x+(SM-R.y)*(SM+R.w/(R.x*(SR-R.y))));
+      F=physF(R,ER)+SR*(Us-U);
+    }
+  }
+  if(ax==1) F=F.xzyw;
+  return F;
+}
+vec4 faceFlux(ivec2 a, ivec2 d, int ax){
+  ivec2 b=a+d;
+  bool sa=isSolid(a), sb=isSolid(b);
+  if(sa&&sb) return vec4(0.0);
+  vec4 WL,WR;
+  if(sb){ WL=getP(a); WR=mirrorW(WL,ax); }
+  else if(sa){ WR=getP(b); WL=mirrorW(WR,ax); }
+  else{
+    vec4 Pa=getP(a), Pb=getP(b), dab=Pb-Pa;
+    ivec2 am=a-d, bp=b+d;
+    vec4 sA=isSolid(am)?vec4(0.0):vl(Pa-getP(am),dab);
+    vec4 sB=isSolid(bp)?vec4(0.0):vl(dab,getP(bp)-Pb);
+    WL=Pa+0.5*sA; WR=Pb-0.5*sB;
+    if(WL.x<=1e-5||WL.w<=1e-5) WL=Pa;
+    if(WR.x<=1e-5||WR.w<=1e-5) WR=Pb;
+  }
+  return hllc(WL,WR,ax);
+}
+void main(){
+  ivec2 c=ivec2(gl_FragCoord.xy);
+  vec4 U0=texelFetch(uS0,c,0);
+  vec2 p=(vec2(c)+0.5)*uH;
+  if(solidAt(p)){ o=U0; return; }
+  if(reservoirAt(p)){
+    // combustion roughness: drifting hot/cold pockets (entropy spots) in the chamber gas
+    float Tf=uT0*(1.0+uTurb*0.22*(vnoise(vec3(p*34.0,uTime*22.0))-0.5));
+    o=toCons(vec4(uP0/Tf,0.0,0.0,uP0)); return;
+  }
+  vec4 U=texelFetch(uS,c,0);
+  vec4 Fe=faceFlux(c,ivec2(1,0),0), Fw=faceFlux(c-ivec2(1,0),ivec2(1,0),0);
+  vec4 Gn=faceFlux(c,ivec2(0,1),1), Gs=faceFlux(c-ivec2(0,1),ivec2(0,1),1);
+  vec4 W=toPrim(U);
+  // axisymmetric source: -(1/r) * (rho v, rho u v, rho v^2, v (E+p))
+  vec4 src=vec4(W.x*W.z, W.x*W.y*W.z, W.x*W.z*W.z, W.z*(U.w+W.w))/p.y;
+  vec4 Ln=-(Fe-Fw)/uH-(Gn-Gs)/uH-src;
+  vec4 Un=uA*U0+uB*(U+uDt*Ln);
+  // seed the lip shear layer with small random radial forcing so it rolls up and wanders
+  float lip=smoothstep(0.03,0.0,abs(p.y-RE))*smoothstep(XE-0.01,XE+0.01,p.x)*smoothstep(XE+0.09,XE+0.02,p.x);
+  if(lip>0.0) Un.z+=uB*uDt*uTurb*lip*Un.x*24.0*(vnoise(vec3(p*60.0,uTime*40.0))-0.5);
+  Un.x=max(Un.x,1e-4);
+  Un.w=max(Un.w,0.5*(Un.y*Un.y+Un.z*Un.z)/Un.x+1e-4/(GAM-1.0));
+  o=Un;
+}`;
+
+/* derived fields for display: Mach, T/T_amb, log10 p/p_amb, |grad ln rho| per cell */
+const FS_DER=SIMLIB+`
+out vec4 o;
+vec4 derive(ivec2 c){ vec4 W=getP(c); float cs=sqrt(GAM*W.w/W.x); return vec4(length(W.yz)/cs, W.w/W.x, log(W.w)*0.4342945, 0.0); }
+float rho(ivec2 q, float rc){ return isSolid(q)?rc:getP(q).x; }
+void main(){
+  ivec2 c=ivec2(gl_FragCoord.xy);
+  if(isSolid(c)){
+    vec4 acc=vec4(0.0); float n=0.0;
+    for(int dy=-1;dy<=1;dy++) for(int dx=-1;dx<=1;dx++){ ivec2 q=c+ivec2(dx,dy); if(!isSolid(q)){ acc+=derive(q); n+=1.0; } }
+    o=n>0.0?acc/n:vec4(0.0,1.0,0.0,0.0); return;
+  }
+  vec4 D=derive(c);
+  float rc=getP(c).x;
+  vec2 g=vec2(log(rho(c+ivec2(1,0),rc))-log(rho(c-ivec2(1,0),rc)), log(rho(c+ivec2(0,1),rc))-log(rho(c-ivec2(0,1),rc)))*0.5;
+  D.w=length(g);
+  o=D;
+}`;
+
+const FS_DISP=`#version 300 es
+precision highp float;
+uniform sampler2D uD; uniform vec3 uFit; uniform float uRot; uniform int uTop, uBot;
+uniform vec2 uExt; uniform float uXV, uVR, uSch, uClean; uniform vec3 uBg;
+uniform sampler2D uV, uVB1, uVB2; uniform vec2 uRes; uniform float uExpo, uFrost;
+out vec4 o;
+${GEO}
+vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
+float fh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float fn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(fh(i),fh(i+vec2(1,0)),f.x),mix(fh(i+vec2(0,1)),fh(i+vec2(1,1)),f.x),f.y); }
+float ffbm(vec2 p){ return 0.5*fn(p)+0.3*fn(p*2.3+5.1)+0.2*fn(p*5.1+1.7); }
+vec3 turbo(float x){ x=clamp(x,0.0,1.0);
+  vec3 c=vec3(0.13572138+x*(4.61539260+x*(-42.66032258+x*(132.13108234+x*(-152.94239396+x*59.28637943)))),
+              0.09140261+x*(2.19418839+x*(4.84296658+x*(-14.18503333+x*(4.27729857+x*2.82956604)))),
+              0.10667330+x*(12.64194608+x*(-60.58204836+x*(110.36276771+x*(-89.90310912+x*27.34824973)))));
+  return clamp(c,0.0,1.0); }
+vec3 flame(float x){ x=clamp(x,0.0,1.0);
+  vec3 a=vec3(0.03,0.03,0.04), b=vec3(0.45,0.03,0.02), c=vec3(0.95,0.32,0.04), d=vec3(1.0,0.78,0.30), e=vec3(1.0,0.98,0.92);
+  if(x<0.25) return mix(a,b,x/0.25); if(x<0.5) return mix(b,c,(x-0.25)/0.25); if(x<0.75) return mix(c,d,(x-0.5)/0.25); return mix(d,e,(x-0.75)/0.25); }
+vec3 diverge(float x){ x=clamp(x,-1.0,1.0); vec3 m=vec3(0.06,0.065,0.075);
+  return x<0.0 ? mix(m,vec3(0.30,0.62,1.0),pow(-x,0.75)) : mix(m,vec3(1.0,0.52,0.20),pow(x,0.75)); }
+vec3 field(int m, vec4 D){
+  if(m==0) return mix(vec3(0.03,0.032,0.045),turbo(D.x/4.0),smoothstep(0.0,0.35,D.x));
+  if(m==1) return flame((D.y-1.0)/3.0);
+  if(m==2) return mix(vec3(0.025,0.03,0.04),vec3(0.86,0.93,1.0),1.0-exp(-D.w*uSch));
+  return diverge(D.z/0.6);
+}
+float wallA(vec2 p,float px){
+  float a=smoothstep(px,-px,p.x-XC0)*smoothstep(px,-px,p.y-(RC+WALL))*step(0.0,p.x+px);
+  if(p.x>XC0-px && p.x<XE+px){ float R=nozR(clamp(p.x,XC0,XE));
+    a=max(a, smoothstep(-px,px,p.y-R)*smoothstep(px,-px,p.y-R-WALL)*smoothstep(px,-px,p.x-XE)); }
+  return a;
+}
+void main(){
+  vec2 d=(gl_FragCoord.xy-uFit.xy)/uFit.z;
+  vec2 q=uRot>0.5?vec2(-d.y,d.x):d;
+  float px=1.0/uFit.z;
+  if(q.x<-px||q.x>uXV+px||abs(q.y)>uVR+px){ o=vec4(uBg,1.0); return; }
+  vec2 p=vec2(q.x,abs(q.y));
+  vec4 D=texture(uD,vec2(p.x/uExt.x,p.y/uExt.y));
+  int m=q.y>=0.0?uTop:uBot;
+  vec3 col;
+  if(m==4){
+    vec2 uv=gl_FragCoord.xy/uRes;
+    vec3 bl=texture(uVB1,uv).rgb*0.45+texture(uVB2,uv).rgb*0.7;
+    vec3 e=texture(uV,uv).rgb;
+    col=vec3(0.012,0.013,0.016)+pow(aces(e*uExpo),vec3(1.0/2.2));
+    // engine seen from outside (opaque), lit by its own plume
+    float Rx=p.x<XC0?RC+WALL:nozR(clamp(p.x,XC0,XE))+WALL;
+    float ea=smoothstep(px,-px,p.y-Rx)*smoothstep(px,-px,p.x-XE)*step(0.0,p.x);
+    if(ea>0.0){
+      float ny=clamp(p.y/Rx,0.0,1.0), nz=sqrt(1.0-ny*ny);
+      vec3 base=p.x<XT?vec3(0.20,0.12,0.08):vec3(0.11,0.115,0.125);
+      float tubes=p.x>XT?0.85+0.15*cos(asin(ny)*50.0):1.0;
+      vec3 ec=base*(0.12+0.85*pow(nz,0.7)*(0.55+0.45*sign(q.y)*ny*0.5+0.25))*tubes;
+      ec+=vec3(0.7,0.75,0.8)*exp(-pow((ny-0.42)*7.0,2.0))*0.18*tubes;
+      ec+=base*bl*uExpo*3.0*nz;
+      ec*=mix(1.0,0.6,smoothstep(XE-0.012,XE-0.004,p.x));
+      // cryogenic rime: LOX chill-down frosts the cold injector end; it thins toward the
+      // throat (the hot end stays bare) and builds up on the underside where drips collect
+      if(uFrost>0.0){
+        float ang=asin(ny)*sign(q.y);                       // -1.57 underside .. +1.57 top
+        vec2 fp=vec2(p.x*70.0, ang*9.0);
+        float n=ffbm(fp), fine=fn(fp*6.0);
+        float along=1.0-smoothstep(XC0+0.04, XT+0.015, p.x);  // full at injector, gone by the throat
+        float under=smoothstep(0.4,-1.2,ang);                 // thicker underneath
+        float cover=smoothstep(0.32,0.62, along*(0.55+0.5*n)+under*0.22*along+0.08*fine)*uFrost;
+        // icicle drips hanging off the lower edge
+        float drip=step(0.86,fn(vec2(p.x*160.0,3.0)))*smoothstep(-1.2,-1.5,ang)*along;
+        cover=max(cover,drip*uFrost);
+        float lit=0.35+0.65*pow(nz,0.6);
+        vec3 rime=vec3(0.80,0.86,0.92)*lit*(0.85+0.3*fine);
+        rime+=vec3(1.0)*smoothstep(0.93,1.0,fn(fp*14.0))*0.35*lit;  // crystal sparkle
+        rime+=bl*uExpo*1.6*nz;                                      // the plume lights the frost
+        ec=mix(ec,rime,cover);
+      }
+      col=mix(col,ec,ea);
+    }
+    col+=pow(aces(bl*uExpo),vec3(1.0/2.2))*0.55;
+  } else col=field(m,D);
+  float a=m==4?0.0:wallA(p,px*0.8);
+  if(a>0.0){
+    float hl=smoothstep(0.40,0.47,abs(fract((q.x+q.y)*48.0)-0.5));
+    vec3 wc=mix(vec3(0.15,0.16,0.18),vec3(0.30,0.32,0.35),hl);
+    wc=mix(wc,vec3(0.55,0.58,0.62),clamp(a*(1.0-a)*4.0,0.0,1.0));
+    col=mix(col,wc,a);
+  }
+  if(q.x>XE && uClean<0.5) col=mix(col,vec3(1.0),0.22*smoothstep(px*1.2,0.0,abs(q.y))*step(0.5,fract(q.x*14.0)));
+  float edge=min(min(q.x,uXV-q.x),uVR-abs(q.y));
+  if(uClean<0.5) col=mix(col,vec3(0.16,0.17,0.19),smoothstep(px*1.5,0.0,abs(edge))*0.9);
+  else col=mix(uBg,col,smoothstep(0.0,0.14,min(uXV-q.x,uVR-abs(q.y))));
+  col=mix(col,uBg,smoothstep(0.0,-px,edge));
+  o=vec4(col,1.0);
+}`;
+
+/* Visual render: treat the axisymmetric CFD solution as a 3D emitter and integrate
+ * glow along each camera ray (optically thin). Emission = density x thermal spectrum.
+ * T/T_amb is mapped to Kelvin assuming a ~3500 K chamber. */
+const BB=`
+vec3 blackbody(float K){
+  float t=K/100.0;
+  float r=t<=66.0?1.0:clamp(1.292936*pow(t-60.0,-0.1332047),0.0,1.0);
+  float g=t<=66.0?clamp(0.3900816*log(t)-0.6318414,0.0,1.0):clamp(1.1298909*pow(t-60.0,-0.0755148),0.0,1.0);
+  float b=t>=66.0?1.0:(t<=19.0?0.0:clamp(0.5432068*log(t-10.0)-1.1962541,0.0,1.0));
+  return vec3(r,g,b);
+}`;
+const FS_VIS=`#version 300 es
+precision highp float;
+uniform sampler2D uD; uniform vec3 uFit; uniform float uRot; uniform vec2 uExt; uniform float uXV;
+uniform vec3 uBand; uniform float uSoot, uBandK, uTK, uTime, uTurb;
+float h3(vec3 p){ p=fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float vnoise(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.0-2.0*f);
+  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+out vec4 o;
+${GEO}
+// Planck radiance (Wien limit) sampled at 620/540/460 nm, normalised to red at 3000 K
+vec3 thermal(float K){ const vec3 L=vec3(0.62,0.54,0.46); return pow(L,vec3(-5.0))*exp(-1.4388e4/(L*K))/4.77e-3; }
+void main(){
+  vec2 d=(gl_FragCoord.xy-uFit.xy)/uFit.z;
+  vec2 q=uRot>0.5?vec2(-d.y,d.x):d;
+  float y=abs(q.y);
+  const float RV=0.5;
+  if(q.x<0.0||q.x>uXV||y>=RV){ o=vec4(0.0,0.0,0.0,1.0); return; }
+  float zr=sqrt(RV*RV-y*y);
+  const int N=${Q.has('lite')?24:48}; float dz=zr/float(N);
+  vec3 col=vec3(0.0);
+  for(int i=0;i<N;i++){
+    float z=(float(i)+0.5)*dz;
+    float r=sqrt(y*y+z*z);
+    vec4 D=texture(uD,vec2(q.x/uExt.x,r/uExt.y));
+    float T=D.y;
+    if(T<1.15) continue;
+    if(q.x<XE && r<nozR(max(q.x,XC0))+WALL) continue;   // hidden behind the engine wall
+    float rho=pow(10.0,D.z)/T;
+    float K=T*uTK;
+    vec3 soot=thermal(K)*uSoot;
+    vec3 band=uBand*uBandK*(0.15*smoothstep(1.3,2.2,T)+smoothstep(2.2,3.6,T));
+    vec3 np=vec3(q.x*16.0-uTime*60.0,y*16.0,z*16.0);
+    float fl=0.65*vnoise(np)+0.35*vnoise(np*2.1+7.3);
+    float flick=1.0+uTurb*0.9*(fl-0.5)*smoothstep(XE,XE+0.25,q.x);
+    col+=rho*smoothstep(1.15,1.6,T)*(soot+band)*dz*max(flick,0.0);
+  }
+  o=vec4(col*2.0,1.0);
+}`;
+const FS_BLUR=`#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uDir; uniform vec2 uOut; out vec4 o;
+void main(){
+  vec2 uv=gl_FragCoord.xy/uOut;
+  vec3 c=texture(uTex,uv).rgb*0.2270;
+  c+=(texture(uTex,uv+uDir*1.3846).rgb+texture(uTex,uv-uDir*1.3846).rgb)*0.3162;
+  c+=(texture(uTex,uv+uDir*3.2308).rgb+texture(uTex,uv-uDir*3.2308).rgb)*0.0703;
+  o=vec4(c,1.0);
+}`;
+
+/* ============================== GL plumbing ============================== */
+function compile(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function program(fs){ const p=gl.createProgram(); gl.attachShader(p,compile(gl.VERTEX_SHADER,VS)); gl.attachShader(p,compile(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const L={}; return {p,u:n=>(n in L)?L[n]:(L[n]=gl.getUniformLocation(p,n))}; }
+let P_INIT,P_STEP,P_DER,P_DISP,P_VIS,P_BLUR;
+try{ P_INIT=program(FS_INIT); P_STEP=program(FS_STEP); P_DER=program(FS_DER); P_DISP=program(FS_DISP); P_VIS=program(FS_VIS); P_BLUR=program(FS_BLUR); }
+catch(e){ console.error(e); return fail('Shader compile failed: '+e.message); }
+gl.bindVertexArray(gl.createVertexArray());
+
+function target(w,h,f32){
+  const tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+  if(f32) gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,w,h,0,gl.RGBA,gl.FLOAT,null);
+  else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,w,h,0,gl.RGBA,gl.HALF_FLOAT,null);
+  const flt=f32?gl.NEAREST:gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,flt); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,flt);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const fb=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  return {tex,fb,w,h};
+}
+function free(t){ if(t){ gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); } }
+
+/* ============================== simulation ============================== */
+const RD=0.7, XD=3.4;          // simulated extent: r in [0,0.8], x in [0,4]
+let XV=3.0; const VR=0.46;       // displayed window (XV shortens on phones)
+const T0=4.0, SMAX=7.0, CFL=0.45, RAMP=0.3;
+const RES={low:112, med:160, high:240};
+const TIME_MS=14.0;            // 1 sim time unit ≈ 14 ms for a 1 m exit diameter, 340 m/s ambient sound speed
+let NR,NX,H,DT,S=[],D=null;
+let t=0, tIgn=0, ignited=false, p0=1, P0=clamp(+(Q.get('p0')||16),6,120);
+let paused=false, turb=clamp(+(Q.has('turb')?Q.get('turb'):50),0,100)/100;
+
+function allocate(key){
+  const nr=RES[key]||(+key>=32?+key:RES.med);
+  S.forEach(free); free(D);
+  NR=nr; H=RD/NR; NX=Math.round(XD/H); DT=CFL*H/SMAX;
+  S=[target(NX,NR,true),target(NX,NR,true),target(NX,NR,true)];
+  D=target(NX,NR,false);
+  reset();
+}
+function bindTex(prog,name,tex,unit){ gl.activeTexture(gl.TEXTURE0+unit); gl.bindTexture(gl.TEXTURE_2D,tex); gl.uniform1i(prog.u(name),unit); }
+function simUniforms(prog){ gl.uniform2i(prog.u('uN'),NX,NR); gl.uniform1f(prog.u('uH'),H); }
+function reset(){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,S[0].fb); gl.viewport(0,0,NX,NR); gl.useProgram(P_INIT.p);
+  simUniforms(P_INIT); gl.drawArrays(gl.TRIANGLES,0,3);
+  t=0; tIgn=0; p0=1; ignited=false; derive();
+}
+function stage(dst,src,base,A,B){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,dst.fb); gl.viewport(0,0,NX,NR); gl.useProgram(P_STEP.p);
+  simUniforms(P_STEP);
+  bindTex(P_STEP,'uS',src.tex,0); bindTex(P_STEP,'uS0',base.tex,1);
+  gl.uniform1f(P_STEP.u('uDt'),DT); gl.uniform1f(P_STEP.u('uA'),A); gl.uniform1f(P_STEP.u('uB'),B);
+  // chamber pressure "roughness": a few % of broadband flutter + slow chug
+  const ph=t*60, rough=ignited?turb*(0.035*Math.sin(ph*1.7+Math.sin(ph*0.31)*2)+0.025*Math.sin(ph*4.3+1.1)+0.02*(Math.random()-0.5)):0;
+  gl.uniform1f(P_STEP.u('uP0'),Math.max(1,p0*(1+rough))); gl.uniform1f(P_STEP.u('uT0'),T0);
+  gl.uniform1f(P_STEP.u('uTime'),t); gl.uniform1f(P_STEP.u('uTurb'),ignited?turb:0);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
+function step(){
+  if(ignited){
+    const te=t-tIgn;
+    if(te<RAMP){ const k=te/RAMP; p0=1+(P0-1)*k*k*(3-2*k); }
+    else p0+=(P0-p0)*(1-Math.exp(-DT/0.05));
+  }
+  stage(S[1],S[0],S[0],0,1);
+  stage(S[2],S[1],S[0],0.5,0.5);
+  const tmp=S[0]; S[0]=S[2]; S[2]=tmp;
+  t+=DT;
+}
+function derive(){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,D.fb); gl.viewport(0,0,NX,NR); gl.useProgram(P_DER.p);
+  simUniforms(P_DER); bindTex(P_DER,'uS',S[0].tex,0); gl.drawArrays(gl.TRIANGLES,0,3);
+}
+
+/* ============================ fields & legends ============================ */
+const FIELDS=[
+  {key:'mach',short:'Mach',name:'Mach number',lo:'0',hi:'4'},
+  {key:'temp',short:'Temperature',name:'Temperature T/T∞',lo:'1',hi:'4'},
+  {key:'schlieren',short:'Schlieren',name:'Numerical schlieren',lo:'weak',hi:'strong'},
+  {key:'pressure',short:'Pressure',name:'Pressure p/p∞',lo:'0.25',hi:'4'},
+  {key:'visual',short:'Visual glow',name:'Visual (line-of-sight glow)',lo:'1000 K',hi:'3500 K'},
+];
+const idx=k=>Math.max(0,FIELDS.findIndex(f=>f.key===k));
+let fTop=idx(Q.get('top')||'visual'), fBot=Q.has('bottom')?idx(Q.get('bottom')):2;
+const turboJS=x=>{x=clamp(x,0,1); const r=0.13572138+x*(4.61539260+x*(-42.66032258+x*(132.13108234+x*(-152.94239396+x*59.28637943))));
+  const g=0.09140261+x*(2.19418839+x*(4.84296658+x*(-14.18503333+x*(4.27729857+x*2.82956604))));
+  const b=0.10667330+x*(12.64194608+x*(-60.58204836+x*(110.36276771+x*(-89.90310912+x*27.34824973)))); return [r,g,b].map(v=>clamp(v,0,1));};
+const mixJS=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
+const flameJS=x=>{const s=[[0.03,0.03,0.04],[0.45,0.03,0.02],[0.95,0.32,0.04],[1,0.78,0.3],[1,0.98,0.92]]; const i=Math.min(3,Math.floor(x*4)); return mixJS(s[i],s[i+1],x*4-i);};
+const divJS=x=>{const m=[0.06,0.065,0.075]; return x<0?mixJS(m,[0.3,0.62,1],Math.pow(-x,0.75)):mixJS(m,[1,0.52,0.2],Math.pow(x,0.75));};
+const schJS=x=>mixJS([0.025,0.03,0.04],[0.86,0.93,1],x);
+const bbJS=K=>{const t=K/100; const r=t<=66?1:clamp(1.292936*Math.pow(t-60,-0.1332047),0,1);
+  const g=t<=66?clamp(0.3900816*Math.log(t)-0.6318414,0,1):clamp(1.1298909*Math.pow(t-60,-0.0755148),0,1);
+  const b=t>=66?1:(t<=19?0:clamp(0.5432068*Math.log(t-10)-1.1962541,0,1)); return [r,g,b].map(v=>Math.pow(v,1.6));};
+const visJS=x=>{const K=1000+2500*x; const L=[0.62,0.54,0.46]; const e=L.map(l=>Math.pow(l,-5)*Math.exp(-1.4388e4/(l*K))/4.77e-3*3); return e.map(v=>clamp(Math.pow(1-Math.exp(-v),1/2.2),0,1));};
+const CMAP=[x=>mixJS([0.03,0.032,0.045],turboJS(x),clamp(x*4/0.35,0,1)),flameJS,schJS,x=>divJS(x*2-1),visJS];
+function grad(i){ const st=[]; for(let k=0;k<=12;k++){ const c=CMAP[i](k/12).map(v=>Math.round(v*255)); st.push(`rgb(${c}) ${(k/12*100).toFixed(1)}%`);} return `linear-gradient(90deg,${st.join(',')})`; }
+function setLegend(el,i,side){ const mob=document.body.classList.contains('mobile'); el.querySelector('.nm').textContent=side+': '+(mob?FIELDS[i].short:FIELDS[i].name); el.querySelector('.lo').textContent=FIELDS[i].lo;
+  el.querySelector('.hi').textContent=FIELDS[i].hi; el.querySelector('.bar').style.background=grad(i); }
+let ROT=false;
+const PROPS={
+  kerolox:{soot:1.0,  band:[0.30,0.40,1.0], bandK:0.0,  expo:45.0},
+  methalox:{soot:0.12,band:[0.50,0.32,1.0], bandK:0.35, expo:16.0},
+  hydrolox:{soot:0.03,band:[0.40,0.50,1.0],bandK:0.10, expo:24.0},
+};
+let prop=PROPS[Q.get('prop')]?Q.get('prop'):'kerolox', expoUser=1;
+const usesVis=()=>fTop===4||fBot===4;
+function legends(){ const mob=document.body.classList.contains('mobile'); [selT,selB].forEach(sel=>[...sel.options].forEach((o,i)=>o.text=mob?FIELDS[i].short:FIELDS[i].name)); $('lblTop').textContent=ROT?'Right half':'Upper half'; $('lblBot').textContent=ROT?'Left half':'Lower half'; setLegend($('lgA'),fTop,ROT?'Right':'Upper'); setLegend($('lgB'),fBot,ROT?'Left':'Lower'); }
+
+/* ================================= UI ================================= */
+const selT=$('fTop'), selB=$('fBot');
+FIELDS.forEach((f,i)=>{ selT.add(new Option(f.name,i)); selB.add(new Option(f.name,i)); });
+selT.value=fTop; selB.value=fBot;
+function syncVisUI(){ $('visG').style.display=usesVis()?'':'none'; $('expG').style.display=usesVis()?'':'none'; layout(); }
+selT.onchange=()=>{fTop=+selT.value; syncVisUI();}; selB.onchange=()=>{fBot=+selB.value; syncVisUI();};
+$('prop').value=prop; $('prop').onchange=()=>{prop=$('prop').value;};
+const tb=$('turb'); tb.value=Math.round(turb*100); tb.oninput=()=>{ turb=tb.value/100; $('turbV').textContent=tb.value+'%'; tb.style.setProperty('--p',tb.value+'%'); }; tb.oninput();
+const ex=$('expo'); ex.oninput=()=>{ expoUser=Math.pow(2,+ex.value); $('expoV').textContent=(+ex.value>=0?'+':'')+(+ex.value).toFixed(1)+' EV'; ex.style.setProperty('--p',((+ex.value+2)/4*100)+'%'); }; ex.oninput();
+const p0El=$('p0'); p0El.value=P0;
+function syncP0(){ $('p0V').textContent=P0+'× ambient'; p0El.style.setProperty('--p',((P0-p0El.min)/(p0El.max-p0El.min)*100)+'%'); readouts(); }
+p0El.oninput=()=>{ P0=+p0El.value; syncP0(); };
+let resKey=RES[Q.get('res')]?Q.get('res'):(matchMedia('(pointer:coarse)').matches?'low':'med');
+if(+Q.get('res')>=32) resKey=Q.get('res');
+$('res').value=RES[resKey]?resKey:'low';
+$('res').onchange=()=>{ resKey=$('res').value; allocate(resKey); setFire(); };
+let maxSteps=+(Q.get('speed')||48); if(![12,48,120,300].includes(maxSteps)) maxSteps=48; $('spd').value=maxSteps;
+$('spd').onchange=()=>{ maxSteps=+$('spd').value; spf=Math.min(spf,maxSteps); };
+function setFire(){ $('fire').textContent=ignited?'Restart':'Ignite'; }
+function ignite(){ if(ignited) reset(); ignited=true; tIgn=t; setFire(); }
+$('fire').onclick=ignite;
+$('pause').onclick=()=>{ paused=!paused; $('pause').textContent=paused?'Play':'Pause'; $('pause').setAttribute('aria-pressed',paused); };
+const setMenu=o=>{ document.body.classList.toggle('menu-open',o); $('menu').setAttribute('aria-expanded',o); if(o) $('close').focus(); };
+$('menu').onclick=()=>setMenu(!document.body.classList.contains('menu-open'));
+$('scrim').onclick=()=>setMenu(false); $('close').onclick=()=>setMenu(false);
+$('restart').onclick=()=>ignite();
+addEventListener('keydown',e=>{ if(e.key==='Escape') setMenu(false); });
+$('hide').onclick=()=>{ $('ui').classList.add('hidden'); $('show').classList.add('vis'); layout(); };
+$('show').onclick=()=>{ $('ui').classList.remove('hidden'); $('show').classList.remove('vis'); layout(); };
+addEventListener('keydown',e=>{ if(/INPUT|SELECT/.test(e.target.tagName)) return;
+  if(e.key==='h'||e.key==='H') ($('ui').classList.contains('hidden')?$('show'):$('hide')).click();
+  if(e.key===' '){ e.preventDefault(); $('pause').click(); }
+  if(e.key==='r'||e.key==='R') ignite(); });
+
+// design-point nozzle numbers (isentropic, gamma 1.3)
+const AR=(RE_/RT_)**2;
+const arM=M=>(1/M)*Math.pow((2/(G_+1))*(1+(G_-1)/2*M*M),(G_+1)/(2*(G_-1)));
+let lo=1.01,hi=8; for(let i=0;i<60;i++){ const m=(lo+hi)/2; (arM(m)<AR)?lo=m:hi=m; }
+const ME=(lo+hi)/2, PE_P0=Math.pow(1+(G_-1)/2*ME*ME,-G_/(G_-1));
+function readouts(){
+  $('rMe').textContent=ME.toFixed(2);
+  const n=P0*PE_P0; $('rN').textContent=n.toFixed(2);
+  let r;
+  if(!ignited) r='Ambient air at rest. Press Ignite.';
+  else if(t-tIgn<RAMP*0.9) r='Chamber pressurising: starting shock and vortex ring';
+  else if(n<0.4) r='Heavily overexpanded: flow separates inside the bell';
+  else if(n<0.92) r='Overexpanded: plume pinches, Mach disk forms';
+  else if(n<1.1) r='Near ideal expansion: weak shock cells';
+  else r='Underexpanded: plume bulges, barrel shocks';
+  $('regime').textContent=r;
+}
+
+/* ============================== layout ============================== */
+let W=0,Hc=0,dpr=1,FIT=[0,0,1],VT=null,VB1a=null,VB1b=null,VB2a=null,VB2b=null;
+function layout(){
+  dpr=Math.min(devicePixelRatio||1,Q.has('lite')?1:2);
+  const cw=canvas.clientWidth, ch=canvas.clientHeight;
+  W=Math.round(cw*dpr); Hc=Math.round(ch*dpr); canvas.width=W; canvas.height=Hc;
+  const MOBILE=cw<=700||Math.min(cw,ch)<=500;
+  document.body.classList.toggle('mobile',MOBILE);
+  ROT=Q.has('horizontal')?false:(MOBILE?ch>cw:ch>cw*1.1);
+  XV=(MOBILE&&ROT)?2.2:3.0;
+  legends();
+  const ui=$('ui'); const reserve=(EMBED||MOBILE||ui.classList.contains('hidden'))?8:(ch-ui.getBoundingClientRect().top)+10;
+  const leg=$('legend'); const showLeg=!(EMBED&&Q.get('legend')==='0');
+  leg.style.display=showLeg?'flex':'none';
+  const m=Math.max(10,cw*0.02);
+  let legH=showLeg?34:0;
+  if(MOBILE&&showLeg){ // legend pinned top-left, clear of the round buttons
+    leg.style.left=m+'px'; leg.style.top=Math.max(12,m)+'px'; leg.style.width=(cw-m-(EMBED?m:112))+'px';
+    legH=leg.offsetHeight+6;
+  }
+  const ax=m, ay=(MOBILE?Math.max(12,m):m)+legH, aw=cw-2*m, ah=Math.max(60,ch-reserve-ay-m*0.5);
+  let s,ox,oy,left,top,dw,dh;
+  if(!ROT && FLUSH){ // fill the full width; any vertical overflow is the host's to feather
+    s=cw/XV; dw=cw; dh=2*VR*s; left=0; top=(ch-dh)/2; ox=0; oy=ch/2; }
+  else if(!ROT){ s=Math.min(aw/XV,ah/(2*VR)); dw=XV*s; dh=2*VR*s; left=ax+(aw-dw)/2; top=ay+(ah-dh)/2; ox=left; oy=top+dh/2; }
+  else{ s=Math.min(aw/(2*VR),ah/XV); dw=2*VR*s; dh=XV*s; left=ax+(aw-dw)/2; top=ay+(ah-dh)/2; ox=left+dw/2; oy=top; }
+  FIT=[ox*dpr,(ch-oy)*dpr,s*dpr];
+  [VT,VB1a,VB1b,VB2a,VB2b].forEach(free);
+  VT=target(Math.max(2,W>>1),Math.max(2,Hc>>1),false);
+  VB1a=target(Math.max(2,W>>3),Math.max(2,Hc>>3),false); VB1b=target(VB1a.w,VB1a.h,false);
+  VB2a=target(Math.max(2,Math.round(W/20)),Math.max(2,Math.round(Hc/20)),false); VB2b=target(VB2a.w,VB2a.h,false);
+  if(!MOBILE){ leg.style.left=left+'px'; leg.style.width=dw+'px'; leg.style.top=(top-legH+4)+'px'; }
+}
+addEventListener('resize',layout);
+
+/* ================================ loop ================================ */
+// One loop that never exits: the browser already stops rAF in hidden tabs. Returning
+// on hidden and re-arming on visibilitychange could leave the loop dead for good
+// (e.g. when the page loads hidden, as an embedded iframe often does).
+const FLOW=clamp(+(Q.get('flow')||0),0,4), FROST=clamp(+(Q.get('frost')||0),0,1);
+const FPS=clamp(+(Q.get('fps')||55),15,120), MINSPF=clamp(+(Q.get('minspf')||1),1,60), WARM=clamp(+(Q.get('warm')||0),0,3);
+let last=performance.now(), spf=Math.max(12,MINSPF), acc=0, frames=0, lastAdapt=last, lastRO=0;
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) last=performance.now(); });
+const BGH=/^[0-9a-f]{6}$/i.test(Q.get('bg')||'')?Q.get('bg'):'07080a';
+const BG=[0,2,4].map(i=>parseInt(BGH.slice(i,i+2),16)/255);
+document.body.style.background='#'+BGH;
+
+function blur(src,dst,dx,dy){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,dst.fb); gl.viewport(0,0,dst.w,dst.h); gl.useProgram(P_BLUR.p);
+  bindTex(P_BLUR,'uTex',src.tex,0); gl.uniform2f(P_BLUR.u('uDir'),dx/src.w,dy/src.h); gl.uniform2f(P_BLUR.u('uOut'),dst.w,dst.h);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
+function visual(){
+  const P=PROPS[prop];
+  gl.bindFramebuffer(gl.FRAMEBUFFER,VT.fb); gl.viewport(0,0,VT.w,VT.h); gl.useProgram(P_VIS.p);
+  bindTex(P_VIS,'uD',D.tex,0);
+  gl.uniform3f(P_VIS.u('uFit'),FIT[0]*VT.w/W,FIT[1]*VT.h/Hc,FIT[2]*VT.w/W);
+  gl.uniform1f(P_VIS.u('uRot'),ROT?1:0); gl.uniform2f(P_VIS.u('uExt'),NX*H,NR*H); gl.uniform1f(P_VIS.u('uXV'),XV);
+  gl.uniform3fv(P_VIS.u('uBand'),P.band); gl.uniform1f(P_VIS.u('uSoot'),P.soot); gl.uniform1f(P_VIS.u('uBandK'),P.bandK);
+  gl.uniform1f(P_VIS.u('uTK'),875.0); gl.uniform1f(P_VIS.u('uTime'),FLOW>0?performance.now()/1000*FLOW:t); gl.uniform1f(P_VIS.u('uTurb'),turb);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  blur(VT,VB1a,2,0); blur(VB1a,VB1b,0,2); blur(VB1b,VB2a,2,0); blur(VB2a,VB2b,0,2);
+}
+function draw(){
+  if(usesVis()) visual();
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null); gl.viewport(0,0,W,Hc); gl.useProgram(P_DISP.p);
+  bindTex(P_DISP,'uD',D.tex,0);
+  gl.uniform3fv(P_DISP.u('uFit'),FIT); gl.uniform1f(P_DISP.u('uRot'),ROT?1:0);
+  gl.uniform1i(P_DISP.u('uTop'),fTop); gl.uniform1i(P_DISP.u('uBot'),fBot);
+  gl.uniform2f(P_DISP.u('uExt'),NX*H,NR*H); gl.uniform1f(P_DISP.u('uXV'),XV); gl.uniform1f(P_DISP.u('uVR'),VR);
+  gl.uniform3fv(P_DISP.u('uBg'),BG); gl.uniform1f(P_DISP.u('uClean'),Q.has('clean')?1:0); gl.uniform1f(P_DISP.u('uFrost'),FROST);
+  gl.uniform1f(P_DISP.u('uSch'),9.0*NR/160);
+  bindTex(P_DISP,'uV',VT.tex,1); bindTex(P_DISP,'uVB1',VB1b.tex,2); bindTex(P_DISP,'uVB2',VB2b.tex,3);
+  gl.uniform2f(P_DISP.u('uRes'),W,Hc);
+  gl.uniform1f(P_DISP.u('uExpo'),PROPS[prop].expo*expoUser*Math.pow(16/P0,0.55));
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
+function loop(now){
+  // clamp so a long pause doesn't read as one huge slow frame and starve spf
+  const fdt=Math.min(Math.max((now-last)/1000,0),0.1); last=now;
+  if(!paused){
+    // warm start: burn through the startup transient in big batches so the plume is up within a second
+    const n=(ignited && t-tIgn<WARM) ? 900 : spf;
+    for(let i=0;i<n;i++) step();
+    derive();
+    if(LOOP && ignited && t-tIgn>2.1) ignite();
+  }
+  draw();
+  // adapt steps/frame to hold frame rate
+  acc+=fdt; frames++;
+  if(now-lastAdapt>350){ const avg=acc/frames; acc=0; frames=0; lastAdapt=now;
+    if(avg>1/(FPS*0.82)) spf=Math.max(MINSPF,Math.floor(spf*0.8)); else if(avg<1/FPS) spf=Math.min(maxSteps,Math.ceil(spf*1.3)+1); }
+  if(now-lastRO>150){ lastRO=now; $('clock').textContent='t = '+((ignited?t-tIgn:0)*TIME_MS).toFixed(2)+' ms'; readouts(); }
+  requestAnimationFrame(loop);
+}
+
+allocate(resKey);
+syncVisUI(); syncP0();
+if(Q.has('test')){
+  window.__sim={ run(n){ for(let i=0;i<n;i++) step(); derive(); draw(); return t; }, ignite,
+    stats(){ gl.bindFramebuffer(gl.FRAMEBUFFER,S[0].fb); const b=new Float32Array(NX*NR*4); gl.readPixels(0,0,NX,NR,gl.RGBA,gl.FLOAT,b);
+      let nan=0,minR=1e9,maxR=0,maxU=0; for(let i=0;i<b.length;i+=4){ if(!isFinite(b[i]+b[i+1]+b[i+2]+b[i+3])){nan++;continue;}
+        minR=Math.min(minR,b[i]); maxR=Math.max(maxR,b[i]); maxU=Math.max(maxU,Math.abs(b[i+1]/b[i])); } return {NX,NR,t,nan,minR,maxR,maxU,p0}; } };
+  draw();
+} else {
+  requestAnimationFrame(loop);
+  // embedded: light the engine at once (the warm start then skips the startup transient)
+  if(EMBED) ignite(); else setTimeout(()=>{ if(!ignited) ignite(); }, 900);
+}
+})();
+</script>
+</body>
+</html>

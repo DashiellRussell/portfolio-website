@@ -8,6 +8,7 @@ import { Cta } from "./cta"
 import { AsciiField } from "./ascii-field"
 import { Ascii3D } from "./ascii-3d"
 import { ZoneSection } from "./zone-section"
+import { RotatingWord } from "./rotating-word"
 
 /**
  * Opening frame. A 3D rocket rendered entirely as ASCII, scrubbed by scroll.
@@ -45,7 +46,7 @@ export function Hero() {
       sectionRef={ref}
     >
       <div className="absolute inset-0 -z-10">
-        <AsciiField />
+        <AsciiField className="opacity-70" />
 
         <motion.div style={{ scale: rocketScale }} className="absolute inset-0">
           <Ascii3D progressRef={progressRef} />
@@ -60,6 +61,20 @@ export function Hero() {
               "radial-gradient(ellipse 78% 58% at 50% 45%, transparent 0%, color-mix(in oklab, var(--background) 55%, transparent) 68%, color-mix(in oklab, var(--background) 92%, transparent) 100%)",
           }}
         />
+        {/* Darken the field behind the copy so the headline and line read cleanly:
+            a column scrim on wide screens, an even dim on phones where the text
+            spans the width. */}
+        <div
+          className="absolute inset-0 hidden sm:block"
+          style={{
+            background:
+              "linear-gradient(to right, color-mix(in oklab, var(--background) 88%, transparent) 0%, color-mix(in oklab, var(--background) 70%, transparent) 38%, transparent 66%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 sm:hidden"
+          style={{ background: "color-mix(in oklab, var(--background) 62%, transparent)" }}
+        />
       </div>
 
       <motion.div
@@ -67,10 +82,6 @@ export function Hero() {
         className="container-page flex flex-1 items-center pt-32"
       >
         <div className="max-w-4xl">
-          <p className="label label-accent mb-8">
-            Mechatronics engineering and physics — UNSW
-          </p>
-
           <h1 className="display mb-8">
             Dashiell
             <br />
@@ -78,8 +89,9 @@ export function Hero() {
           </h1>
 
           <p className="mb-11 max-w-xl text-[length:var(--step-1)] leading-relaxed text-[var(--muted-foreground)]">
-            Avionics, spacecraft electronics, and the software that runs on them.
-            Hardware that has to work the first time.
+            Mechatronics &amp; physics student, roboticist, rocket builder, satellite
+            engineer and{" "}
+            <RotatingWord words={["PCB designer", "firmware developer", "web developer", "CTO"]} />
           </p>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -97,7 +109,7 @@ export function Hero() {
           <Link href="#work" className="label transition-colors hover:text-[var(--accent)]">
             Selected work ↓
           </Link>
-          <span className="label">Sydney, Australia</span>
+          <span className="label" style={{ fontSize: "var(--step-0)", letterSpacing: "0.16em" }}>Sydney, Australia</span>
         </div>
       </motion.div>
     </ZoneSection>

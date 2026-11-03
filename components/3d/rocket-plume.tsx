@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
+import { observeVisibility } from "@/lib/canvas"
 
 /**
  * Raymarched rocket exhaust plume.
@@ -427,6 +428,15 @@ export function RocketPlume({
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   const still = tuning.still ?? prefersReducedMotion
 
+  // The raymarch is the most expensive thing on the page: never run it off-screen.
+  const wrap = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = wrap.current
+    if (!el) return
+    return observeVisibility(el, setVisible)
+  }, [])
+
   const horizontal = orientation === "horizontal"
   // camera sits at target + offset/zoom, so zoom scales apparent size directly
   const base = horizontal
@@ -445,9 +455,10 @@ export function RocketPlume({
   return (
     // an unsized parent gives the Canvas zero height and renders nothing at all,
     // with no error - so fill by default and let callers override
-    <div className={className} style={{ width: "100%", height: "100%", ...style }}>
+    <div ref={wrap} className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas
-        dpr={[1, 1.75]}
+        frameloop={visible ? "always" : "demand"}
+        dpr={[1, 1.5]}
         camera={{ position: view.position, fov: view.fov }}
         gl={{
           antialias: false,

@@ -13,6 +13,8 @@ import { SatelliteDiagram } from "@/components/space/satellite-diagram"
 import { ZoneSection } from "@/components/space/zone-section"
 import { DrawRule } from "@/components/space/scroll"
 import { Copy } from "@/components/space/copy"
+import { ComingSoon } from "@/components/space/coming-soon"
+import { DETAILS_LIVE } from "@/lib/content/flags"
 
 const STATUS_LABEL: Record<Project["status"], string> = {
   flown: "Flown",
@@ -55,6 +57,7 @@ export default async function ProjectPage({
   const experience = getExperience(slug)
   const project = experience?.projects.find((p) => p.slug === projectSlug)
   if (!experience || !project) notFound()
+  if (!DETAILS_LIVE) return <ComingSoon experience={experience} project={project.name} />
 
   const hasImage = assetExists(project.image?.src)
 

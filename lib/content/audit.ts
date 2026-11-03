@@ -49,8 +49,9 @@ export function isPlaceholder(value: string): boolean {
 }
 
 /**
- * Called from the page modules. In development it reports; in a production
- * build it throws, so incomplete content cannot be deployed by accident.
+ * Called from the page modules. In development and on Vercel preview
+ * deployments it reports; in a production build it throws, so incomplete
+ * content cannot reach the live site by accident.
  */
 export function assertContentComplete() {
   const found = findPlaceholders()
@@ -58,7 +59,8 @@ export function assertContentComplete() {
 
   const summary = found.map((f) => `  ${f.slug} → ${f.path}`).join("\n")
 
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PLACEHOLDER_CONTENT !== "1") {
+  const preview = process.env.VERCEL_ENV === "preview"
+  if (process.env.NODE_ENV === "production" && !preview && process.env.ALLOW_PLACEHOLDER_CONTENT !== "1") {
     throw new Error(
       `Refusing to build: ${found.length} unverified placeholder(s) remain in lib/content/experiences.ts.\n` +
         `${summary}\n\n` +

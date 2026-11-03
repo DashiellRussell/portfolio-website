@@ -12,7 +12,7 @@ import "./globals.css"
 /** Display: a grotesk that holds up at very large sizes and in all-caps. */
 const display = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 })
@@ -27,11 +27,18 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Dashiell Russell — Spacecraft electronics and avionics",
+    default: "Dashiell Russell",
     template: "%s",
   },
   description:
-    "Mechatronics engineering and physics at UNSW. Spacecraft electronics, rocket avionics, and the embedded software that runs on them.",
+    "Mechatronics & physics student at UNSW — roboticist, rocket builder, and satellite engineer.",
+  openGraph: {
+    title: "Dashiell Russell",
+    description: "Mechatronics & physics student at UNSW — roboticist, rocket builder, and satellite engineer.",
+    type: "website",
+    locale: "en_AU",
+  },
+  twitter: { card: "summary_large_image", title: "Dashiell Russell" },
   icons: {
     icon: [
       { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },

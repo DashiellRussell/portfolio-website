@@ -14,6 +14,8 @@ import { ProjectCard } from "@/components/space/project-card"
 import { ZoneSection } from "@/components/space/zone-section"
 import { Reveal, DrawRule } from "@/components/space/scroll"
 import { Copy } from "@/components/space/copy"
+import { ComingSoon } from "@/components/space/coming-soon"
+import { DETAILS_LIVE } from "@/lib/content/flags"
 
 export function generateStaticParams() {
   return experiences.map((e) => ({ slug: e.slug }))
@@ -44,6 +46,7 @@ export default async function ExperiencePage({
   const { slug } = await params
   const experience = getExperience(slug)
   if (!experience) notFound()
+  if (!DETAILS_LIVE) return <ComingSoon experience={experience} />
 
   const hasHero = assetExists(experience.hero?.src)
   const current = experience.roles[0]
