@@ -31,10 +31,10 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Mechatronics & physics student at UNSW — roboticist, rocket builder, and satellite engineer.",
+    "Mechatronics & physics student at UNSW. Roboticist, rocket builder, and satellite engineer.",
   openGraph: {
     title: "Dashiell Russell",
-    description: "Mechatronics & physics student at UNSW — roboticist, rocket builder, and satellite engineer.",
+    description: "Mechatronics & physics student at UNSW. Roboticist, rocket builder, and satellite engineer.",
     type: "website",
     locale: "en_AU",
   },

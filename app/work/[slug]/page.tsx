@@ -32,10 +32,10 @@ export async function generateMetadata({
 
   // Never leak placeholder text into search results or link previews.
   const description = isPlaceholder(experience.summary)
-    ? `${experience.name} — ${experience.roles[0]?.title ?? "Experience"}.`
+    ? `${experience.name}: ${experience.roles[0]?.title ?? "Experience"}.`
     : experience.summary
 
-  return { title: `${experience.name} — Dashiell Russell`, description }
+  return { title: `${experience.name} · Dashiell Russell`, description }
 }
 
 export default async function ExperiencePage({

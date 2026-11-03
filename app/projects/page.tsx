@@ -7,7 +7,7 @@ import { Reveal, DrawRule } from "@/components/space/scroll"
 import { assertContentComplete } from "@/lib/content/audit"
 
 export const metadata: Metadata = {
-  title: "Projects — Dashiell Russell",
+  title: "Projects · Dashiell Russell",
   description:
     "Every project, across spacecraft electronics, rocket avionics, robotics, and embedded software.",
 }
@@ -31,7 +31,7 @@ export default function ProjectsPage() {
         <p className="label label-accent mb-4">Index</p>
         <h1 className="display mb-8">Projects</h1>
         <p className="mb-2 max-w-xl leading-relaxed text-[var(--muted-foreground)]">
-          Everything, in one list — spacecraft electronics, rocket avionics,
+          Everything, in one list: spacecraft electronics, rocket avionics,
           robotics, and the software that runs on them.
         </p>
         <p className="label">{String(all.length).padStart(2, "0")} total</p>

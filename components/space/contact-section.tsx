@@ -36,8 +36,8 @@ export function ContactSection() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError("That email address doesn't look right.")
     if (form.message.trim().length < 10) return setError("Add a line or two about what you have in mind.")
     setError(null)
-    const subject = `${form.topic} — ${form.name}${form.org ? `, ${form.org}` : ""}`
-    const body = `${form.message.trim()}\n\n— ${form.name}${form.org ? `, ${form.org}` : ""}\n${form.email}`
+    const subject = `${form.topic}: ${form.name}${form.org ? `, ${form.org}` : ""}`
+    const body = `${form.message.trim()}\n\n${form.name}${form.org ? `, ${form.org}` : ""}\n${form.email}`
     window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     setOpened(true)
   }
@@ -60,9 +60,9 @@ export function ContactSection() {
       <div className="container-page grid gap-16 py-[var(--section-y)] lg:grid-cols-[1fr_1.2fr]">
         <Reveal>
           <p className="label label-accent mb-5">Contact</p>
-          <h2 className="headline mb-8 max-w-md">Building something that has to work the first time?</h2>
+          <h2 className="headline mb-8 max-w-md">Let&apos;s talk.</h2>
           <p className="mb-10 max-w-md leading-relaxed text-[var(--muted-foreground)]">
-            Spacecraft electronics, avionics, robotics, embedded systems — tell me what you are working on.
+            Spacecraft electronics, avionics, robotics, embedded systems. Tell me what you are working on.
           </p>
 
           <dl className="grid gap-6">

@@ -17,7 +17,7 @@ export const experiences: Experience[] = [
   {
     slug: "spiral-blue",
     name: "Spiral Blue",
-    tagline: "Flight hardware and software for Sapphire V2 — the spacecraft MCU board and the code that runs on it.",
+    tagline: "Flight hardware and software for Sapphire V2: the spacecraft MCU board and the code that runs on it.",
     zone: "orbit",
     visual: "satellite",
     roles: [
@@ -195,7 +195,7 @@ export const experiences: Experience[] = [
   {
     slug: "unsw-rocketry",
     name: "UNSW Rocketry",
-    tagline: "Avionics for competition rockets — flight computers, telemetry, and battery management.",
+    tagline: "Avionics for competition rockets: flight computers, telemetry, and battery management.",
     zone: "ascent",
     visual: "nozzle",
     roles: [
@@ -221,7 +221,7 @@ export const experiences: Experience[] = [
         // different claims and this field must not blur them.
         status: "ground-tested",
         summary:
-          "TODO: what the avionics stack does — sensing, state estimation, deployment logic, logging — and its actual flight heritage.",
+          "TODO: what the avionics stack does (sensing, state estimation, deployment logic, logging) and its actual flight heritage.",
         contributions: ["TODO: name the specific boards, and separate flown from bench-tested."],
         specs: [
           { label: "Platform", value: "TODO" },
@@ -301,7 +301,7 @@ export const experiences: Experience[] = [
       },
     ],
     summary:
-      "Directing the society's digital infrastructure — the public website, internal tooling, and the systems that run events.",
+      "Directing the society's digital infrastructure: the public website, internal tooling, and the systems that run events.",
     hero: { src: "/ramsocunsw.png", alt: "RAMSOC UNSW website" },
     projects: [
       {
@@ -327,7 +327,7 @@ export function getExperience(slug: string): Experience | undefined {
   return experiences.find((e) => e.slug === slug)
 }
 
-/** Formats a role's date range, e.g. "Apr 2026 — Aug 2026" or "Aug 2026 — Present". */
+/** Formats a role's date range, e.g. "Apr 2026 – Aug 2026" or "Aug 2026 – Present". */
 export function roleRange(role: { start: string; end: string | null }): string {
-  return `${role.start} — ${role.end ?? "Present"}`
+  return `${role.start} – ${role.end ?? "Present"}`
 }

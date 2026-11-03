@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 /** Link-preview card for every page that doesn't define its own. */
-export const alt = "Dashiell Russell — mechatronics & physics, robotics, rockets, satellites"
+export const alt = "Dashiell Russell: mechatronics & physics, robotics, rockets, satellites"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 

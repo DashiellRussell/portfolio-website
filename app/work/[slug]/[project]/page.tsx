@@ -42,10 +42,10 @@ export async function generateMetadata({
   if (!experience || !project) return {}
 
   const description = isPlaceholder(project.summary)
-    ? `${project.name} — ${experience.name}.`
+    ? `${project.name}, ${experience.name}.`
     : project.summary
 
-  return { title: `${project.name} — ${experience.name}`, description }
+  return { title: `${project.name} · ${experience.name}`, description }
 }
 
 export default async function ProjectPage({
