@@ -747,22 +747,45 @@ export function RoboticsBench({
 
   // The copy is layered over the canvas, so the canvas never sees the pointer;
   // track it on the window and test against the panel's own rect instead.
+  // Touch has no hover: a tap or drag on the card aims the arm, which holds
+  // the pose for a moment after the finger lifts, then eases back to idle.
   useEffect(() => {
     if (still) return
-    const onMove = (e: PointerEvent) => {
+    let release: ReturnType<typeof setTimeout> | undefined
+    const aim = (cx: number, cy: number) => {
       const el = wrap.current
-      if (!el) return
+      if (!el) return false
       const r = el.getBoundingClientRect()
       const p = pointer.current
-      p.inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
-      p.x = ((e.clientX - r.left) / r.width) * 2 - 1
-      p.y = -(((e.clientY - r.top) / r.height) * 2 - 1)
+      p.inside = cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom
+      p.x = THREE.MathUtils.clamp(((cx - r.left) / r.width) * 2 - 1, -1, 1)
+      p.y = THREE.MathUtils.clamp(-(((cy - r.top) / r.height) * 2 - 1), -1, 1)
+      return p.inside
+    }
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") aim(e.clientX, e.clientY)
+    }
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t || !aim(t.clientX, t.clientY)) return
+      clearTimeout(release)
+    }
+    const onTouchEnd = () => {
+      clearTimeout(release)
+      release = setTimeout(() => (pointer.current.inside = false), 2200)
     }
     const onLeave = () => (pointer.current.inside = false)
     window.addEventListener("pointermove", onMove, { passive: true })
+    window.addEventListener("touchstart", onTouch, { passive: true })
+    window.addEventListener("touchmove", onTouch, { passive: true })
+    window.addEventListener("touchend", onTouchEnd, { passive: true })
     document.addEventListener("pointerleave", onLeave)
     return () => {
+      clearTimeout(release)
       window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("touchstart", onTouch)
+      window.removeEventListener("touchmove", onTouch)
+      window.removeEventListener("touchend", onTouchEnd)
       document.removeEventListener("pointerleave", onLeave)
     }
   }, [still])
