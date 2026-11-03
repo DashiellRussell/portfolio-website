@@ -1,4 +1,5 @@
 import { experiences } from "./experiences"
+import { DETAILS_LIVE } from "./flags"
 import type { Experience } from "./types"
 
 /**
@@ -49,12 +50,35 @@ export function isPlaceholder(value: string): boolean {
 }
 
 /**
+ * Placeholders on what a visitor can see while the detail pages are held
+ * back (`DETAILS_LIVE` off): each card's name, one-liner and current role,
+ * and the project names the holding pages show.
+ */
+export function findVisiblePlaceholders(list: Experience[] = experiences): Placeholder[] {
+  const out: Placeholder[] = []
+  for (const e of list) {
+    const r = e.roles[0]
+    const fields: [string, unknown][] = [
+      ["name", e.name],
+      ["tagline", e.tagline],
+      ["roles[0].title", r?.title],
+      ["roles[0].start", r?.start],
+      ["roles[0].end", r?.end ?? ""],
+      ...e.projects.map((p, i) => [`projects[${i}].name`, p.name] as [string, unknown]),
+    ]
+    for (const [path, v] of fields) walk(v, path, e.slug, out)
+  }
+  return out
+}
+
+/**
  * Called from the page modules. In development and on Vercel preview
  * deployments it reports; in a production build it throws, so incomplete
  * content cannot reach the live site by accident.
  */
 export function assertContentComplete() {
-  const found = findPlaceholders()
+  // with the detail pages held back, only the visible fields have to be real
+  const found = DETAILS_LIVE ? findPlaceholders() : findVisiblePlaceholders()
   if (found.length === 0) return
 
   const summary = found.map((f) => `  ${f.slug} → ${f.path}`).join("\n")

@@ -39,3 +39,30 @@ export function ComingSoon({ experience, project }: { experience: Experience; pr
     </ZoneSection>
   )
 }
+
+/** Holding page for /projects while `DETAILS_LIVE` is off: points back to the cards. */
+export function ProjectsComingSoon({ experiences }: { experiences: Experience[] }) {
+  return (
+    <ZoneSection zone="orbit" className="flex min-h-[80svh] items-end">
+      <div className="container-page w-full pb-[clamp(3rem,7vw,6rem)] pt-[clamp(8rem,16vw,14rem)]">
+        <Reveal>
+          <p className="label label-accent mb-5">Details coming soon</p>
+          <h1 className="display mb-6" style={{ fontWeight: 700 }}>Projects</h1>
+          <p className="mb-10 max-w-xl leading-relaxed text-[var(--muted-foreground)]">
+            The full project write-ups are being put together. For now, the work is on the home page.
+          </p>
+          <ul className="mb-10 grid gap-2">
+            {experiences.map((e) => (
+              <li key={e.slug}>
+                <Link href={`/#${e.slug}`} className="text-[length:var(--step-1)] hover:text-[var(--accent)]">
+                  {e.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link href="/#contact" className="label hover:text-[var(--accent)]">Get in touch</Link>
+        </Reveal>
+      </div>
+    </ZoneSection>
+  )
+}

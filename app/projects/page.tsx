@@ -5,6 +5,8 @@ import { ProjectCard } from "@/components/space/project-card"
 import { ZoneSection } from "@/components/space/zone-section"
 import { Reveal, DrawRule } from "@/components/space/scroll"
 import { assertContentComplete } from "@/lib/content/audit"
+import { DETAILS_LIVE } from "@/lib/content/flags"
+import { ProjectsComingSoon } from "@/components/space/coming-soon"
 
 export const metadata: Metadata = {
   title: "Projects · Dashiell Russell",
@@ -14,6 +16,7 @@ export const metadata: Metadata = {
 
 export default function ProjectsPage() {
   assertContentComplete()
+  if (!DETAILS_LIVE) return <ProjectsComingSoon experiences={experiences} />
 
   // Flatten every project, keeping the organisation it belongs to. Experience
   // order carries through, so the space work leads here too.
