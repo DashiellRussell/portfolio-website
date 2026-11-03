@@ -76,7 +76,7 @@ export function SiteFooter() {
 
       <div className="container-page">
         <div className="rule" />
-        <div className="flex flex-wrap items-center justify-between gap-4 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-6" style={{ paddingBottom: "max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}>
           <span className="label">© {new Date().getFullYear()} Dashiell Russell</span>
           <a href="#top" className="label hover:text-[var(--accent)]">Back to top ↑</a>
         </div>

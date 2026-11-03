@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Archivo, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 
@@ -24,6 +24,13 @@ const mono = JetBrains_Mono({
   variable: "--font-mono-custom",
   display: "swap",
 })
+
+// viewport-fit=cover lets the layout read env(safe-area-inset-*) so the
+// header and menu can keep clear of the notch and the home indicator
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#05070d",
+}
 
 export const metadata: Metadata = {
   title: {

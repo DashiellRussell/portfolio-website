@@ -53,6 +53,7 @@ export function SiteHeader() {
       <header
         className="fixed inset-x-0 top-0 z-50 transition-all duration-500"
         style={{
+          paddingTop: "env(safe-area-inset-top)",
           background: solid && !open ? "color-mix(in oklab, var(--background) 82%, transparent)" : "transparent",
           backdropFilter: solid && !open ? "blur(14px)" : "none",
           borderBottom: `1px solid ${solid && !open ? "var(--border)" : "transparent"}`,
@@ -139,9 +140,16 @@ export function SiteHeader() {
             exit={{ clipPath: "inset(0 0 100% 0)" }}
             transition={{ duration: 0.45, ease }}
           >
-            <nav className="container-page flex flex-1 flex-col justify-center gap-10 pt-24 pb-10" aria-label="Menu">
+            <nav
+              className="container-page flex flex-1 flex-col"
+              style={{
+                paddingTop: "calc(env(safe-area-inset-top) + 6.5rem)",
+                paddingBottom: "max(1.75rem, calc(env(safe-area-inset-bottom) + 1.25rem))",
+              }}
+              aria-label="Menu"
+            >
               {/* top-level items share one size; the projects under them are smaller */}
-              <ul className="grid gap-7">
+              <ul className="grid gap-12">
                 <motion.li initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease, delay: 0.12 }}>
                   <Link href="/projects" onClick={close} className="block text-[length:var(--step-2)] font-semibold">
                     Projects
@@ -169,7 +177,7 @@ export function SiteHeader() {
               </ul>
 
               <motion.div
-                className="flex gap-3"
+                className="mt-auto flex gap-3 pt-10"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.45 }}
