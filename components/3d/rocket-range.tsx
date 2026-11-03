@@ -6,6 +6,7 @@ import * as THREE from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { NozzleSim, NOZZLE_BG } from "./nozzle-sim"
 import { useOnScreenActive } from "@/components/space/on-screen"
+import { useIsMobile } from "@/components/space/use-mobile"
 import { Prewarm } from "./prewarm"
 
 /**
@@ -520,6 +521,26 @@ function Range() {
 
 export function RocketRange() {
   const active = useOnScreenActive()
+  const mobile = useIsMobile()
+  // phones: just the engine firing down the card, no range overlay
+  if (mobile)
+    return (
+      <div style={{ position: "absolute", inset: 0, background: `#${NOZZLE_BG}` }}>
+        <NozzleSim
+          key="vertical"
+          vertical
+          active={active}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            maskImage: "linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%)",
+          }}
+        />
+      </div>
+    )
   return (
     <div style={{ position: "absolute", inset: 0, background: `#${NOZZLE_BG}` }}>
       <NozzleSim

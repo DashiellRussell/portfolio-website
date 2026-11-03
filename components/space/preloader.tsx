@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 
 /**
- * Initial load sequence: a three-count inside an orbit ring that draws
- * itself while the systems come up line by line, then the name assembles,
+ * Initial load sequence: an orbit ring that draws itself while the systems
+ * come up line by line, then the name assembles,
  * then ignition — a bright line across the middle and the screen parting
  * along it to reveal the site.
  *
@@ -59,8 +59,6 @@ export function Preloader() {
     }
   }, [])
 
-  const counting = ms < T.count
-  const count = 3 - Math.min(2, Math.floor((ms / T.count) * 3))
   const ring = Math.min(1, ms / T.count)
   const systemsUp = Math.min(SYSTEMS.length, Math.floor((ms / T.count) * (SYSTEMS.length + 0.6)))
   const naming = ms >= T.count
@@ -107,23 +105,6 @@ export function Preloader() {
                   <circle cx="96" cy="50" r="2" fill="var(--foreground)" />
                 </g>
               </svg>
-              {/* re-keyed each count: the entrance replays, no exit to wait on */}
-              {counting ? (
-                  <motion.span
-                    key={count}
-                    className="font-mono tabular-nums"
-                    style={{ fontSize: "var(--step-3)", color: "var(--foreground)" }}
-                    initial={{ opacity: 0, scale: 1.35, filter: "blur(6px)" }}
-                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    T−0{count}
-                  </motion.span>
-                ) : (
-                  <motion.span key="lift" className="label" style={{ color: "var(--zone-ascent)" }} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                    Liftoff
-                  </motion.span>
-                )}
             </div>
 
             {/* systems coming up, then the name in the same slot */}

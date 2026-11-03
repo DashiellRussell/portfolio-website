@@ -29,12 +29,12 @@ export function SiteHeader() {
       }}
     >
       <div className="container-page flex h-16 items-center justify-between">
-        <Link href="/" className="label !text-[var(--foreground)] !tracking-[0.22em]">
+        <Link href="/" className="label whitespace-nowrap !text-[var(--foreground)] !tracking-[0.16em] sm:!tracking-[0.22em]">
           DASHIELL RUSSELL
         </Link>
 
-        <nav className="flex items-center gap-6" aria-label="Primary">
-          <Link href="/#work" className="label transition-colors hover:text-[var(--accent)]">
+        <nav className="flex items-center gap-4 sm:gap-6" aria-label="Primary">
+          <Link href="/#work" className="label hidden transition-colors hover:text-[var(--accent)] sm:inline">
             Experience
           </Link>
           <Link href="/projects" className="label transition-colors hover:text-[var(--accent)]">

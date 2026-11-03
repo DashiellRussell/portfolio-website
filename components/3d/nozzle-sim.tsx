@@ -28,17 +28,22 @@ import { useEffect, useRef, useState } from "react"
  * Open the page directly for the full controls.
  */
 export const NOZZLE_BG = "03050a" // --surface-sunken
-const SRC = `/sims/nozzle.html?embed&legend=0&top=visual&bottom=visual&res=low&speed=120&horizontal&clean&lite&loop=0&warm=1.8&fps=28&minspf=8&flow=0.45&flushleft&frost=0.85&bg=${NOZZLE_BG}`
+const COMMON = `embed&legend=0&top=visual&bottom=visual&res=low&speed=120&clean&lite&loop=0&warm=1.8&fps=28&minspf=8&flow=0.45&frost=0.85&bg=${NOZZLE_BG}`
+// wide panels: fire sideways from the left edge. Phones: the sim's own portrait
+// layout, engine at the top firing straight down.
+const SRC = `/sims/nozzle.html?${COMMON}&horizontal&flushleft`
+const SRC_VERTICAL = `/sims/nozzle.html?${COMMON}`
 
 /**
  * `active` false: the card is being prepared off screen. The page starts in
  * `preload` (warm-up without drawing, then idle) and is told to `play` when
  * the card arrives, so the plume is already fully out on the first frame.
  */
-export function NozzleSim({ style, active = true }: { style?: React.CSSProperties; active?: boolean }) {
+export function NozzleSim({ style, active = true, vertical = false }: { style?: React.CSSProperties; active?: boolean; vertical?: boolean }) {
   const frame = useRef<HTMLIFrameElement>(null)
   // fixed at mount: changing src would reload the solver
-  const [src] = useState(() => (active ? SRC : `${SRC}&preload`))
+  const base = vertical ? SRC_VERTICAL : SRC
+  const [src] = useState(() => (active ? base : `${base}&preload`))
   const latest = useRef(active)
   const post = () => frame.current?.contentWindow?.postMessage(latest.current ? "play" : "preload", window.location.origin)
   useEffect(() => {

@@ -135,9 +135,11 @@ export function renderTile(req: TileRequest): HTMLCanvasElement | null {
 
   // Close-up looks along the array so the finish fills the frame; the wide
   // shot frames the whole craft.
+  // Portrait (phones) aims below the craft so it rides in the top half, clear
+  // of the copy at the bottom of the panel.
   const target = req.closeUp
     ? new THREE.Vector3(5.2, 0, 0)
-    : new THREE.Vector3(0, 0, 0)
+    : new THREE.Vector3(0, aspect < 1 ? -5.5 : 0, 0)
   const dir = req.closeUp
     ? new THREE.Vector3(0.55, 0.72, 0.95).normalize()
     : new THREE.Vector3(6.5, 8.5, 17).normalize()

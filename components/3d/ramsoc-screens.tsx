@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { RoundedBox, useTexture } from "@react-three/drei"
 import * as THREE from "three"
 import { useOnScreenActive } from "@/components/space/on-screen"
+import { useIsMobile } from "@/components/space/use-mobile"
 import { Prewarm } from "./prewarm"
 
 /**
@@ -222,7 +223,9 @@ function Phone(props: React.ComponentProps<"group">) {
  * The arc: windows on a circle around a point near the camera, each turned to
  * face it, the outer two dropped a little so the row curves like a visor.
  */
-function Workspace() {
+function Workspace({ phoneOnly }: { phoneOnly: boolean }) {
+  // phones: just the app, floating centred above the copy
+  if (phoneOnly) return <Phone position={[0, 0, 0]} scale={1.6} />
   const R = 3.9
   const centre = new THREE.Vector3(1.15, 0.8, 3.0)
   const angles = [-0.6, -0.2, 0.2, 0.6]
@@ -246,22 +249,27 @@ const TARGET = new THREE.Vector3(0.75, 0.15, 0)
 const OFFSET = new THREE.Vector3(0, 0.15, 5.4)
 
 /** Wide panels keep the left column clear; portrait pulls back and centres. */
-function Framing() {
+function Framing({ phoneOnly }: { phoneOnly: boolean }) {
   const { camera, size } = useThree()
   useEffect(() => {
     const aspect = size.width / Math.max(1, size.height)
-    const back = aspect < 1 ? Math.min(2.2, 1.1 / aspect) : 1
+    let back = aspect < 1 ? Math.min(2.2, 1.1 / aspect) : 1
     const target = TARGET.clone()
-    if (aspect < 1) target.set(1.0, -0.9, 0)
+    if (phoneOnly) {
+      // aim below the phone so it floats in the upper half, clear of the copy
+      target.set(0, -0.62, 0)
+      back = 1
+    } else if (aspect < 1) target.set(1.0, -0.9, 0)
     camera.position.copy(target).addScaledVector(OFFSET, back)
     camera.lookAt(target)
     camera.updateProjectionMatrix()
-  }, [camera, size])
+  }, [camera, size, phoneOnly])
   return null
 }
 
 export function RamsocScreens() {
   const active = useOnScreenActive()
+  const mobile = useIsMobile()
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <Canvas
@@ -274,12 +282,12 @@ export function RamsocScreens() {
           gl.toneMappingExposure = 1.2
         }}
       >
-        <Framing />
+        <Framing phoneOnly={mobile} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[2, 3, 4]} intensity={1.4} />
         <pointLight position={[1.2, 0.6, 1.5]} color={ACCENT} intensity={3} distance={6} />
         <Suspense fallback={null}>
-          <Workspace />
+          <Workspace phoneOnly={mobile} />
           <Prewarm />
         </Suspense>
       </Canvas>

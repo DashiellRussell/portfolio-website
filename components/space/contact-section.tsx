@@ -7,39 +7,46 @@ import { Reveal } from "./scroll"
 
 const EMAIL = "dashiell.russell@gmail.com"
 
-const TOPICS = [
-  "A role or opportunity",
-  "A project or collaboration",
-  "Mentoring or a talk",
-  "Something else",
-] as const
-
 /**
- * Contact: a short form plus the direct channels.
- *
- * There is no mail backend yet, so sending composes the message in the
- * visitor's own mail app (a prefilled mailto:) rather than pretending to send
- * from the site. The address is also one click to copy for webmail users.
+ * Contact: a short form plus the direct channels. The form posts to
+ * /api/contact, which emails me and sends the visitor a confirmation.
  */
 export function ContactSection() {
-  const [form, setForm] = useState({ name: "", email: "", org: "", topic: TOPICS[0] as string, message: "" })
+  const empty = { name: "", email: "", org: "", subject: "", message: "", website: "" }
+  const [form, setForm] = useState(empty)
+  // invalid fields just turn red; `error` is only for a failed send
+  const [bad, setBad] = useState({ name: false, email: false })
   const [error, setError] = useState<string | null>(null)
-  const [opened, setOpened] = useState(false)
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle")
   const [copied, setCopied] = useState(false)
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }))
+    if (k === "name" || k === "email") setBad((b) => ({ ...b, [k]: false }))
+  }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) return setError("Add your name.")
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError("That email address doesn't look right.")
-    if (form.message.trim().length < 10) return setError("Add a line or two about what you have in mind.")
+    if (status === "sending") return
+    const invalid = { name: !form.name.trim(), email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) }
+    setBad(invalid)
+    if (invalid.name || invalid.email) return
     setError(null)
-    const subject = `${form.topic}: ${form.name}${form.org ? `, ${form.org}` : ""}`
-    const body = `${form.message.trim()}\n\n${form.name}${form.org ? `, ${form.org}` : ""}\n${form.email}`
-    window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    setOpened(true)
+    setStatus("sending")
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      const out = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(out.error || "Couldn't send right now.")
+      setStatus("sent")
+      setForm(empty)
+    } catch (err) {
+      setStatus("idle")
+      setError(err instanceof Error ? err.message : "Couldn't send right now.")
+    }
   }
 
   const copy = async () => {
@@ -54,6 +61,7 @@ export function ContactSection() {
 
   const field = "w-full border bg-transparent px-4 py-3 outline-none transition-colors focus:border-[var(--accent)]"
   const fieldStyle = { borderColor: "var(--border-strong)" }
+  const badStyle = { borderColor: "#ff5a4a", boxShadow: "0 0 0 1px #ff5a4a inset" }
 
   return (
     <ZoneSection zone="ground" id="contact" className="border-t" style={{ borderColor: "var(--border)" }}>
@@ -104,11 +112,11 @@ export function ContactSection() {
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2">
                 <span className="label">Name</span>
-                <input className={field} style={fieldStyle} value={form.name} onChange={set("name")} autoComplete="name" />
+                <input className={field} style={bad.name ? badStyle : fieldStyle} aria-invalid={bad.name} value={form.name} onChange={set("name")} autoComplete="name" />
               </label>
               <label className="grid gap-2">
                 <span className="label">Email</span>
-                <input className={field} style={fieldStyle} type="email" value={form.email} onChange={set("email")} autoComplete="email" />
+                <input className={field} style={bad.email ? badStyle : fieldStyle} aria-invalid={bad.email} type="email" value={form.email} onChange={set("email")} autoComplete="email" />
               </label>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -117,33 +125,44 @@ export function ContactSection() {
                 <input className={field} style={fieldStyle} value={form.org} onChange={set("org")} autoComplete="organization" />
               </label>
               <label className="grid gap-2">
-                <span className="label">About</span>
-                <select className={field} style={{ ...fieldStyle, background: "var(--background)" }} value={form.topic} onChange={set("topic")}>
-                  {TOPICS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                <span className="label">Subject (optional)</span>
+                <input className={field} style={fieldStyle} value={form.subject} onChange={set("subject")} />
               </label>
             </div>
             <label className="grid gap-2">
-              <span className="label">Message</span>
+              <span className="label">Message (optional)</span>
               <textarea className={`${field} min-h-40 resize-y`} style={fieldStyle} value={form.message} onChange={set("message")} />
             </label>
 
+            {/* honeypot: hidden from people and screen readers, irresistible to bots */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={form.website}
+              onChange={set("website")}
+              style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }}
+            />
+
             {error ? <p className="label" style={{ color: "#ff7a6a" }} role="alert">{error}</p> : null}
-            {opened && !error ? (
-              <p className="label" role="status">
-                Your mail app should have opened with the message ready to send. If not, email {EMAIL} directly.
+            {status === "sent" ? (
+              <p className="label" style={{ color: "var(--zone-ground)" }} role="status">
+                Sent. Check your inbox for a confirmation; I&apos;ll get back to you soon.
               </p>
             ) : null}
 
             <div>
               <button
                 type="submit"
-                className="group inline-flex items-center gap-3 px-7 py-4 transition-colors"
+                disabled={status === "sending"}
+                className="group inline-flex items-center gap-3 px-7 py-4 transition-opacity disabled:opacity-60"
                 style={{ background: "var(--foreground)", color: "var(--background)" }}
               >
-                <span className="label" style={{ color: "inherit" }}>Send message</span>
+                <span className="label" style={{ color: "inherit" }}>
+                  {status === "sending" ? "Sending…" : "Send message"}
+                </span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>

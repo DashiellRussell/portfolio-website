@@ -6,6 +6,7 @@ import { PerformanceMonitor, useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { observeVisibility } from "@/lib/canvas"
 import { useOnScreenActive } from "@/components/space/on-screen"
+import { useIsMobile } from "@/components/space/use-mobile"
 import { Prewarm } from "./prewarm"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
@@ -697,18 +698,24 @@ const OFFSET = new THREE.Vector3(-0.45, 0.62, 2.7)
  * clear on the left; portrait panels pull back and centre so the arm is not
  * cropped to a single link.
  */
-function Framing() {
+function Framing({ armOnly }: { armOnly: boolean }) {
   const { camera, size } = useThree()
   useEffect(() => {
     const aspect = size.width / Math.max(1, size.height)
-    const back = aspect < 1 ? Math.min(1.75, 0.88 / aspect) : 1
     const target = TARGET.clone()
-    // portrait: centre, and aim low so the bench sits above the copy
-    if (aspect < 1) target.set(0.15, -0.32, -0.05)
+    let back = aspect < 1 ? Math.min(1.75, 0.88 / aspect) : 1
+    if (armOnly) {
+      // phones: the arm alone, centred, aimed low so it sits above the copy
+      target.set(ARM_POS[0] + 0.12, 0.1, ARM_POS[2])
+      back = Math.min(1.4, 0.66 / aspect)
+    } else if (aspect < 1) {
+      // portrait: centre, and aim low so the bench sits above the copy
+      target.set(0.15, -0.32, -0.05)
+    }
     camera.position.copy(target).addScaledVector(OFFSET, back)
     camera.lookAt(target)
     camera.updateProjectionMatrix()
-  }, [camera, size])
+  }, [camera, size, armOnly])
   return null
 }
 
@@ -727,6 +734,7 @@ export function RoboticsBench({
   const [visible, setVisible] = useState(false)
   // prepared off screen by OnScreen, animated only once it is in view
   const active = useOnScreenActive()
+  const mobile = useIsMobile()
   // start sharp, drop to 1x if the frame rate can't keep up, climb back when it can
   const [dpr, setDpr] = useState(1.5)
 
@@ -773,19 +781,24 @@ export function RoboticsBench({
         }}
       >
         <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.5)} />
-        <Framing />
+        <Framing armOnly={mobile} />
         <Lighting />
+        {/* phones get the arm alone; the rest of the bench is desktop-only */}
         <Suspense fallback={null}>
           <Arm pointer={pointer} still={still} />
-          <Winder still={still} />
+          {mobile ? null : <Winder still={still} />}
           <Prewarm />
         </Suspense>
-        <BoardPiles />
-        <Apple position={[0.56, 0, 0.48]} rotation={[0.12, 0.8, 0.05]} />
-        <Parts />
+        {mobile ? null : (
+          <>
+            <BoardPiles />
+            <Apple position={[0.56, 0, 0.48]} rotation={[0.12, 0.8, 0.05]} />
+            <Parts />
+          </>
+        )}
         <Floor variant={FLOOR} />
         <Blob position={ARM_POS} scale={[0.42, 0.42]} />
-        <Blob position={[WINDER_POS[0], 0.002, WINDER_POS[2]]} scale={[0.62, 0.85]} />
+        {mobile ? null : <Blob position={[WINDER_POS[0], 0.002, WINDER_POS[2]]} scale={[0.62, 0.85]} />}
       </Canvas>
     </div>
   )
