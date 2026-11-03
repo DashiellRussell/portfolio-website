@@ -5,8 +5,10 @@ import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fib
 import { PerformanceMonitor, useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { observeVisibility } from "@/lib/canvas"
+import { useOnScreenActive } from "@/components/space/on-screen"
+import { Prewarm } from "./prewarm"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
-import { mergeGeometries, toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js"
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 
 /**
  * Phase Robotics bench — a robotics lab in a box: the CYRA arm, the stator
@@ -33,7 +35,6 @@ const WINDER_POS: [number, number, number] = [0.92, 0, -0.32]
 // shown larger than life so it holds its own next to the arm
 const WINDER_SCALE = 1.6
 
-const CREASE = THREE.MathUtils.degToRad(32)
 
 /** Pointer over the panel, normalised to -1..1 with +y up (as R3F's `mouse`). */
 type Pointer = { x: number; y: number; inside: boolean }
@@ -86,8 +87,7 @@ function useArmRig() {
     src.traverse((o) => {
       const mesh = o as THREE.Mesh
       if (!mesh.isMesh) return
-      // normals were stripped so the welder could merge vertices
-      mesh.geometry = toCreasedNormals(mesh.geometry, CREASE)
+      // creased normals are baked into the GLB at export (32 deg), not computed here
       let finger = false
       o.traverseAncestors((a) => (finger ||= a.name.startsWith("finger_")))
       mesh.material = finger ? FINGER_MATERIAL : armMaterial(mesh.material as THREE.MeshStandardMaterial)
@@ -725,6 +725,8 @@ export function RoboticsBench({
   const wrap = useRef<HTMLDivElement>(null)
   const pointer = useRef<Pointer>({ x: 0, y: 0, inside: false })
   const [visible, setVisible] = useState(false)
+  // prepared off screen by OnScreen, animated only once it is in view
+  const active = useOnScreenActive()
   // start sharp, drop to 1x if the frame rate can't keep up, climb back when it can
   const [dpr, setDpr] = useState(1.5)
 
@@ -761,7 +763,7 @@ export function RoboticsBench({
     // an unsized parent gives the Canvas zero height, so fill by default
     <div ref={wrap} className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas
-        frameloop={visible && !still ? "always" : "demand"}
+        frameloop={visible && active && !still ? "always" : "demand"}
         dpr={dpr}
         camera={{ fov: 34, near: 0.01, far: 20 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
@@ -776,6 +778,7 @@ export function RoboticsBench({
         <Suspense fallback={null}>
           <Arm pointer={pointer} still={still} />
           <Winder still={still} />
+          <Prewarm />
         </Suspense>
         <BoardPiles />
         <Apple position={[0.56, 0, 0.48]} rotation={[0.12, 0.8, 0.05]} />

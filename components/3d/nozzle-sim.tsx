@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
+
 /**
  * Nozzle startup: a GPU axisymmetric Euler solver (HLLC + MUSCL, SSP-RK2)
  * with a line-of-sight glow render, served as a standalone page from
@@ -28,13 +30,29 @@
 export const NOZZLE_BG = "03050a" // --surface-sunken
 const SRC = `/sims/nozzle.html?embed&legend=0&top=visual&bottom=visual&res=low&speed=120&horizontal&clean&lite&loop=0&warm=1.8&fps=28&minspf=8&flow=0.45&flushleft&frost=0.85&bg=${NOZZLE_BG}`
 
-export function NozzleSim({ style }: { style?: React.CSSProperties }) {
+/**
+ * `active` false: the card is being prepared off screen. The page starts in
+ * `preload` (warm-up without drawing, then idle) and is told to `play` when
+ * the card arrives, so the plume is already fully out on the first frame.
+ */
+export function NozzleSim({ style, active = true }: { style?: React.CSSProperties; active?: boolean }) {
+  const frame = useRef<HTMLIFrameElement>(null)
+  // fixed at mount: changing src would reload the solver
+  const [src] = useState(() => (active ? SRC : `${SRC}&preload`))
+  const latest = useRef(active)
+  const post = () => frame.current?.contentWindow?.postMessage(latest.current ? "play" : "preload", window.location.origin)
+  useEffect(() => {
+    latest.current = active
+    post()
+  }, [active])
   return (
     <iframe
-      src={SRC}
+      ref={frame}
+      src={src}
       title="Rocket nozzle startup simulation"
       aria-hidden="true"
       tabIndex={-1}
+      onLoad={post}
       style={{ border: 0, pointerEvents: "none", background: `#${NOZZLE_BG}`, ...style }}
     />
   )

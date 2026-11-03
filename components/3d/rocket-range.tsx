@@ -5,6 +5,8 @@ import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fib
 import * as THREE from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { NozzleSim, NOZZLE_BG } from "./nozzle-sim"
+import { useOnScreenActive } from "@/components/space/on-screen"
+import { Prewarm } from "./prewarm"
 
 /**
  * UNSW Rocketry: a static-fire test range.
@@ -517,9 +519,11 @@ function Range() {
 }
 
 export function RocketRange() {
+  const active = useOnScreenActive()
   return (
     <div style={{ position: "absolute", inset: 0, background: `#${NOZZLE_BG}` }}>
       <NozzleSim
+        active={active}
         style={{
           position: "absolute",
           left: `${SIM_BOX.left * 100}%`,
@@ -533,6 +537,7 @@ export function RocketRange() {
       />
       <Canvas
         orthographic
+        frameloop={active ? "always" : "demand"}
         dpr={[1, 1.25]}
         camera={{ position: [0, 0, 3000], zoom: 1, near: 1, far: 8000 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
@@ -543,6 +548,7 @@ export function RocketRange() {
         }}
       >
         <Range />
+        <Prewarm />
       </Canvas>
     </div>
   )

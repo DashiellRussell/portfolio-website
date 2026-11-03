@@ -4,6 +4,8 @@ import { Suspense, useEffect, useMemo, useRef } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { RoundedBox, useTexture } from "@react-three/drei"
 import * as THREE from "three"
+import { useOnScreenActive } from "@/components/space/on-screen"
+import { Prewarm } from "./prewarm"
 
 /**
  * RAMSOC: the society's web platforms as floating browser windows on a
@@ -259,9 +261,11 @@ function Framing() {
 }
 
 export function RamsocScreens() {
+  const active = useOnScreenActive()
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <Canvas
+        frameloop={active ? "always" : "demand"}
         dpr={[1, 1.5]}
         camera={{ fov: 35, near: 0.1, far: 50 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
@@ -276,6 +280,7 @@ export function RamsocScreens() {
         <pointLight position={[1.2, 0.6, 1.5]} color={ACCENT} intensity={3} distance={6} />
         <Suspense fallback={null}>
           <Workspace />
+          <Prewarm />
         </Suspense>
       </Canvas>
     </div>

@@ -158,6 +158,8 @@
  *   ?fps=55      frame rate the step governor aims for (lower = more steps on slow pages)
  *   ?minspf=1    floor on solver steps per frame, so a slow page never stalls the flow
  *   ?warm=0.9    on ignition, run this many sim units in fast batches before settling
+ *   ?preload     start off-screen: warm up in modest batches without drawing, then idle
+ *                until the host posts 'play' (and 'preload' to go back to idling)
  *   ?flushleft   fill the full width from the left edge (scale to width, centre vertically)
  *   ?frost=0.8   cryogenic rime on the injector end of the engine (visual mode)
  *   ?flow=0.4    drive the glow's flicker from the wall clock at this rate (sim units/s), so the
@@ -685,6 +687,8 @@ addEventListener('resize',layout);
 const FLOW=clamp(+(Q.get('flow')||0),0,4), FROST=clamp(+(Q.get('frost')||0),0,1);
 const FPS=clamp(+(Q.get('fps')||55),15,120), MINSPF=clamp(+(Q.get('minspf')||1),1,60), WARM=clamp(+(Q.get('warm')||0),0,3);
 let last=performance.now(), spf=Math.max(12,MINSPF), acc=0, frames=0, lastAdapt=last, lastRO=0;
+let PRELOAD=Q.has('preload');
+addEventListener('message',e=>{ if(e.data==='preload') PRELOAD=true; else if(e.data==='play'){ PRELOAD=false; last=performance.now(); } });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) last=performance.now(); });
 const BGH=/^[0-9a-f]{6}$/i.test(Q.get('bg')||'')?Q.get('bg'):'07080a';
 const BG=[0,2,4].map(i=>parseInt(BGH.slice(i,i+2),16)/255);
@@ -721,6 +725,11 @@ function draw(){
   gl.drawArrays(gl.TRIANGLES,0,3);
 }
 function loop(now){
+  if(PRELOAD){
+    // off screen: finish the warm-up gently (no drawing), then do nothing at all
+    if(ignited && t-tIgn<WARM){ for(let i=0;i<150;i++) step(); derive(); }
+    last=now; requestAnimationFrame(loop); return;
+  }
   // clamp so a long pause doesn't read as one huge slow frame and starve spf
   const fdt=Math.min(Math.max((now-last)/1000,0),0.1); last=now;
   if(!paused){
