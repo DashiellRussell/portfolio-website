@@ -54,7 +54,7 @@ export default async function OpengraphImage() {
               <div key={c} style={{ width: 90, height: 6, background: c }} />
             ))}
           </div>
-          <div style={{ fontSize: 20, letterSpacing: 4, color: "#8b97ad", textTransform: "uppercase" }}>
+          <div style={{ fontSize: 30, letterSpacing: 5, color: "#c3cbd9", textTransform: "uppercase" }}>
             Sydney, Australia
           </div>
         </div>
