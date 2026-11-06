@@ -22,6 +22,8 @@ import deriveShader from "./derive.wgsl"
 import visualShader from "./visual.wgsl"
 import blurShader from "./blur.wgsl"
 import displayShader from "./display.wgsl"
+import type { QualityTier } from "../quality/quality"
+import { qualityProbe, qualityState, subscribeQuality } from "../quality/store"
 
 /**
  * WebGPU port of the nozzle startup simulation (public/sims/nozzle.html), run
@@ -31,12 +33,14 @@ import displayShader from "./display.wgsl"
  * uses (embed, visual glow on both halves, clean, lite, res=low, speed=120,
  * warm, flow, frost, flushleft). What changes is where the cost lands:
  *
- *  - the solver is a compute kernel that loads each tile once into shared
- *    memory and solves every face once, instead of a fragment pass that
- *    rebuilt each flux twice from ~16 texture reads per cell;
- *  - a frame's ~240 solver dispatches are recorded into one command buffer
- *    with cached bind groups, instead of ~240 framebuffer binds, program
- *    switches and ~2,600 uniform calls on the page's main thread;
+ *  - the solver is a compute kernel that runs a whole RK2 step per dispatch:
+ *    each workgroup loads its tile once into shared memory, keeps the
+ *    intermediate stage there, and solves every face flux once, instead of
+ *    two fragment passes that rebuilt each flux twice from ~16 texture reads
+ *    per cell;
+ *  - a frame's ~120 solver dispatches are recorded into one command buffer
+ *    with fixed bind groups and nothing set between them, instead of ~240
+ *    framebuffer binds, program switches and ~2,600 uniform calls;
  *  - pipelines compile asynchronously before the first frame, so mounting the
  *    card never blocks on shader compilation;
  *  - no iframe: no second document, layout pass or font load per card.
@@ -66,6 +70,8 @@ export interface NozzleController {
     /** Places the probe directly, in sim units. */
     probe(pos: [number, number], vel: [number, number], strength: number): void
     grid: [number, number]
+    /** The tier currently drawing (it lags a downgrade request until Low has compiled). */
+    tier(): QualityTier
   }
 }
 
@@ -83,7 +89,9 @@ const NR = 112 // res=low
 const P0 = 16 // chamber pressure / ambient
 
 // Embed options the site passes.
-const MAX_STEPS = 120 // speed=120
+const MAX_STEPS = 120 // speed=120 (High)
+/** Low tier: the flow runs at about half speed, but stays smooth on a weak GPU. */
+const MAX_STEPS_LOW = 60
 const FPS = 28 // governor target
 const MINSPF = 8
 const WARM = 1.8 // sim units burned through in batches on ignition
@@ -93,7 +101,7 @@ const FROST = 0.85
 const WARM_STEPS_PRELOAD = 150
 const WARM_STEPS_ACTIVE = 300
 /** Rows in the per-stage parameter buffer: two RK stages per step, at the largest batch. */
-const MAX_STAGES = 2 * Math.max(MAX_STEPS, WARM_STEPS_ACTIVE)
+const MAX_STAGES = 2 * Math.max(MAX_STEPS, MAX_STEPS_LOW, WARM_STEPS_ACTIVE)
 
 const KEROLOX = { soot: 1.0, band: [0.3, 0.4, 1.0] as [number, number, number], bandK: 0.0, expo: 45.0 }
 
@@ -127,16 +135,15 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     // Shared by every kernel (vgpu's `uniforms(gpu)` default for values many
     // shaders read): one buffer, not a copy per compute.
     const grid = uniforms(gpu, { n: [NX, NR], h: H, dt: DT, t0: T0 })
-    // The pointer probe changes once per frame and is read by all four step
+    // The pointer probe changes once per frame and is read by both step
     // kernels, so it is shared too; each dispatch captures its current value.
     const probeU = uniforms(gpu, { pos: [0, 0], vel: [0, 0], radius: PROBE_R, strength: 0 })
 
-    // Three state buffers cycle through the RK2 stages:
-    //   stage 1: tmp = s + dt L(s);   stage 2: out = (s + tmp + dt L(tmp)) / 2
-    // and the result becomes the next step's state, so two bindings alternate.
+    // Each dispatch runs a whole RK2 step (both stages, the intermediate state
+    // kept in workgroup memory; see step.wgsl), so the state ping-pongs
+    // between two buffers.
     const bytes = NX * NR * 16
     const A = storage(gpu, bytes)
-    const B = storage(gpu, bytes)
     const C = storage(gpu, bytes)
     const fields = texture(gpu, {
       kind: "2d",
@@ -145,41 +152,34 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       usage: ["storage_binding", "texture_binding"],
     })
 
-    // Per-stage values (pressure, time, turbulence), one vec4 row per RK stage,
-    // uploaded once per frame; the kernels index it with a GPU step counter
-    // that alternates between two buffers (see step.wgsl).
+    // Per-stage values (pressure, time, turbulence), one vec4 row per RK stage
+    // (two per step), uploaded once per frame; the kernel indexes them with a
+    // GPU step counter that alternates between two buffers (see step.wgsl).
     const params = storage(gpu, MAX_STAGES * 16, "read")
     const counterA = storage(gpu, 4)
     const counterB = storage(gpu, 4)
     const rows = new Float32Array(MAX_STAGES * 4)
     const zero = new Uint32Array(1)
 
-    const mkStep = (src: StorageBuffer, base: StorageBuffer, dst: StorageBuffer, second: boolean) =>
+    const mkStep = (src: StorageBuffer, dst: StorageBuffer, counterIn: StorageBuffer, counterOut: StorageBuffer) =>
       compute(gpu, stepShader, {
         label: "nozzle.step",
-        set: {
-          grid,
-          probe: probeU,
-          src,
-          base,
-          dst,
-          params,
-          stage: second ? { a: 0.5, b: 0.5 } : { a: 0, b: 1 },
-          counterIn: second ? counterB : counterA,
-          counterOut: second ? counterA : counterB,
-        },
+        set: { grid, probe: probeU, src, dst, params, counterIn, counterOut },
       })
-    // parity 0: state in A, result in C; parity 1: state in C, result in A
-    const steps: [Compute, Compute][] = [
-      [mkStep(A, A, B, false), mkStep(B, A, C, true)],
-      [mkStep(C, C, B, false), mkStep(B, C, A, true)],
-    ]
+    // parity 0: state in A, result in C; parity 1: state in C, result in A.
+    // The step counter swaps buffers the same way.
+    const steps: [Compute, Compute] = [mkStep(A, C, counterA, counterB), mkStep(C, A, counterB, counterA)]
     const derives = [A, C].map((src) => compute(gpu, deriveShader, { label: "nozzle.derive", set: { grid, src, fields } }))
     const reset = compute(gpu, initShader, { label: "nozzle.init", set: { grid, dst: A } })
 
     const linear = sampler(gpu, { minFilter: "linear", magFilter: "linear" })
     const view = surface(gpu, canvas, { dpr: 1, alphaMode: "opaque" })
-    const half = () => [Math.max(2, view.size[0] >> 1), Math.max(2, view.size[1] >> 1)] as const
+    // Quality tier (vgpu's adaptive-quality pattern; components/3d/quality):
+    //   High  glow ray-marched at half resolution, 24 samples, up to 120 steps a frame
+    //   Low   glow at quarter resolution, 12 samples (fs_low), up to 60 steps a frame
+    let tier: QualityTier = qualityState().effective
+    const glowShift = () => (tier === "low" ? 2 : 1)
+    const half = () => [Math.max(2, view.size[0] >> glowShift()), Math.max(2, view.size[1] >> glowShift())] as const
     const eighth = () => [Math.max(2, view.size[0] >> 3), Math.max(2, view.size[1] >> 3)] as const
     const twentieth = () => [Math.max(2, Math.round(view.size[0] / 20)), Math.max(2, Math.round(view.size[1] / 20))] as const
     const hdr = { format: "rgba16float" as GPUTextureFormat }
@@ -189,7 +189,13 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     const VB2a = target(gpu, { size: twentieth(), ...hdr })
     const VB2b = target(gpu, { size: twentieth(), ...hdr })
 
-    const visual: Effect = effect(gpu, visualShader, { label: "nozzle.visual", set: { fields, fieldSampler: linear } })
+    const mkVisual = (t: QualityTier) =>
+      effect(gpu, visualShader, {
+        label: `nozzle.visual.${t}`,
+        entry: { fragment: t === "low" ? "fs_low" : "fs_main" },
+        set: { fields, fieldSampler: linear },
+      })
+    let visual: Effect = mkVisual(tier)
     const blur: Effect = effect(gpu, blurShader, { label: "nozzle.blur", set: { srcSampler: linear } })
     const display: Effect = effect(gpu, displayShader, {
       label: "nozzle.display",
@@ -198,7 +204,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
 
     // Compile every pipeline off the main thread before the first frame.
     await Promise.all([
-      ...steps.flat().map((s) => s.compile()),
+      ...steps.map((s) => s.compile()),
       ...derives.map((d) => d.compile()),
       reset.compile(),
       visual.compile(VT),
@@ -312,13 +318,11 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       }
       params.write(rows.subarray(0, n * 8))
       counterA.write(zero)
-      // the GPU half: 2n dispatches with fixed bindings, nothing set between them
+      // the GPU half: n dispatches with fixed bindings, nothing set between them
       track(frame(gpu, (f) =>
         f.computePass({ label: "nozzle.solve" }, (pass) => {
           for (let i = 0; i < n; i++) {
-            const [s1, s2] = steps[par]
-            pass.dispatch(s1, groups[0], groups[1])
-            pass.dispatch(s2, groups[0], groups[1])
+            pass.dispatch(steps[par], groups[0], groups[1])
             par ^= 1
           }
           pass.dispatch(derives[par], groups[0], groups[1])
@@ -403,15 +407,49 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     /* -------------------------------------------------------------- loop */
 
     const warming = () => t - tIgn < WARM
+    const maxSteps = () => (tier === "low" ? MAX_STEPS_LOW : MAX_STEPS)
     let spf = Math.max(12, MINSPF)
     let last = performance.now()
     let acc = 0
     let frames = 0
     let lastAdapt = last
 
+    // Presented-frame health, judged against the governor's own target: the
+    // governor sheds solver steps first, so Low is requested only when even
+    // its lightest High frame cannot hold ~80% of that rate.
+    const health = qualityProbe()
+    let lastTick = performance.now()
+    const sample = (now: number, rendered: boolean) => {
+      health.frame({ deltaMs: now - lastTick, active: active && !document.hidden && !warming(), rendered, targetFps: FPS })
+      lastTick = now
+    }
+
+    // High -> Low, once: build and compile the Low glow pass while High keeps
+    // drawing, then swap (vgpu: never compile on the swap frame).
+    let swapping = false
+    const offQuality = subscribeQuality((q) => {
+      if (q.effective !== "low" || tier === "low" || swapping || disposed) return
+      swapping = true
+      const low = mkVisual("low")
+      void low
+        .compile(VT)
+        .then(() => {
+          if (disposed) return low.dispose()
+          const previous = visual
+          tier = "low"
+          visual = low
+          layout() // glow target to quarter resolution, uniforms onto the new pass
+          previous.dispose()
+          spf = Math.min(spf, maxSteps())
+          health.reset()
+        })
+        .catch((err) => console.warn("[nozzle] Low tier unavailable, staying on High", err))
+    })
+
     function loop(now: number) {
       if (disposed) return
       if (inFlight >= 4) {
+        if (active) sample(now, false)
         raf = requestAnimationFrame(loop)
         return
       }
@@ -432,6 +470,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       updateProbe(fdt, n * DT)
       solve(n)
       draw()
+      sample(now, true)
       // adapt steps/frame to hold the frame rate
       acc += fdt
       frames++
@@ -441,7 +480,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         frames = 0
         lastAdapt = now
         if (avg > 1 / (FPS * 0.82)) spf = Math.max(MINSPF, Math.floor(spf * 0.8))
-        else if (avg < 1 / FPS) spf = Math.min(MAX_STEPS, Math.ceil(spf * 1.3) + 1)
+        else if (avg < 1 / FPS) spf = Math.min(maxSteps(), Math.ceil(spf * 1.3) + 1)
       }
       raf = requestAnimationFrame(loop)
     }
@@ -454,7 +493,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     }
 
     const onVisibility = () => {
-      if (!document.hidden) last = performance.now()
+      if (!document.hidden) last = lastTick = performance.now()
     }
     document.addEventListener("visibilitychange", onVisibility)
 
@@ -484,12 +523,15 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
           probeU.set({ pos, vel, strength })
         },
         grid: [NX, NR],
+        tier: () => tier,
       },
       dispose() {
         if (disposed) return
         disposed = true
         cancelAnimationFrame(raf)
         offResize()
+        offQuality()
+        health.dispose()
         document.removeEventListener("visibilitychange", onVisibility)
         gpu.dispose()
       },

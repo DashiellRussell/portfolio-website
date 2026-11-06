@@ -108,6 +108,12 @@ Follow the vgpu docs that ship with the package (`npx vgpu docs cat getting-star
 - pre-warm pipelines (`compile()` / `compileAsync`), share frame-wide values through `uniforms(gpu)`, and record repeating draws into bundles; `set()` only what changed
 - `?vgpu-debug` makes the bench render offscreen and exposes `window.__vgpuThree.readPixels()` for headless checks (headless Chromium's software WebGPU cannot present to a canvas)
 
+Render quality (`components/3d/quality/`) follows vgpu's adaptive-quality guide; `frame-health.ts`, `quality.ts` and `quality-signals.ts` are copied from its example:
+- every visitor starts High; GPU tier (detect-gpu, lazily imported), battery and presented-frame health can each ask for Low, once, site-wide; nothing upgrades automatically
+- Low: the nozzle glow renders at quarter resolution with 12 ray samples (the `fs_low` entry) and at most 60 solver steps a frame; the bench renders at 1x instead of 1.5x
+- `?quality=low` / `?quality=high` forces a tier
+- `npm run dev` / `build` copy detect-gpu's benchmark tables into `public/gpu-benchmarks` (gitignored) so the tier lookup is same-origin
+
 ## Development Notes
 
 ### Adding New Sections

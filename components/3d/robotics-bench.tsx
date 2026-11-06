@@ -1,13 +1,14 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fiber"
-import { PerformanceMonitor, useGLTF } from "@react-three/drei"
+import { useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { observeVisibility } from "@/lib/canvas"
 import { useOnScreenActive } from "@/components/space/on-screen"
 import { useIsMobile } from "@/components/space/use-mobile"
 import { Prewarm, fastShaders } from "./prewarm"
+import { qualityProbe, qualityState, subscribeQuality } from "./quality/store"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 
@@ -728,6 +729,27 @@ function Framing({ armOnly }: { armOnly: boolean }) {
 }
 
 /**
+ * Feeds presented-frame health to the site's quality signals, for whichever
+ * renderer the canvas got. A tick counts as presented when the renderer's
+ * frame counter moved (the vgpu renderer skips ticks when the GPU is behind).
+ */
+function QualityProbe({ running }: { running: boolean }) {
+  const gl = useThree((s) => s.gl) as unknown as { info: { render: { frame: number } } }
+  const probe = useMemo(() => qualityProbe(), [])
+  useEffect(() => () => probe.dispose(), [probe])
+  const last = useRef({ t: 0, frame: -1 })
+  useFrame(() => {
+    const now = performance.now()
+    const frame = gl.info.render.frame
+    if (last.current.t) {
+      probe.frame({ deltaMs: now - last.current.t, active: running && !document.hidden, rendered: frame !== last.current.frame })
+    }
+    last.current = { t: now, frame }
+  })
+  return null
+}
+
+/**
  * The bench renders through vgpu (WebGPU) when the browser has it: three.js
  * keeps the scene graph, models and animation, and `VgpuRenderer` draws it.
  * Without WebGPU, or with `?bench=webgl`, it is the usual WebGLRenderer.
@@ -766,8 +788,12 @@ export function RoboticsBench({
   // prepared off screen by OnScreen, animated only once it is in view
   const active = useOnScreenActive()
   const mobile = useIsMobile()
-  // start sharp, drop to 1x if the frame rate can't keep up, climb back when it can
-  const [dpr, setDpr] = useState(1.5)
+  // High renders at 1.5x, Low at 1x. Low is one-way (components/3d/quality):
+  // the previous monitor climbed back up as soon as Low made frames fast again,
+  // which is the oscillation vgpu's adaptive-quality guide warns against.
+  const tier = useSyncExternalStore(subscribeQuality, () => qualityState().effective, () => "high" as const)
+  const dpr = tier === "low" ? 1 : 1.5
+  const running = visible && active && !still
 
   // Stop rendering entirely while the panel is scrolled away.
   useEffect(() => {
@@ -825,7 +851,7 @@ export function RoboticsBench({
     // an unsized parent gives the Canvas zero height, so fill by default
     <div ref={wrap} className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas
-        frameloop={visible && active && !still ? "always" : "demand"}
+        frameloop={running ? "always" : "demand"}
         dpr={dpr}
         camera={{ fov: 34, near: 0.01, far: 20 }}
         gl={rendererFor}
@@ -835,7 +861,7 @@ export function RoboticsBench({
           gl.toneMappingExposure = 1.3
         }}
       >
-        <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.5)} />
+        <QualityProbe running={running} />
         <Framing armOnly={mobile} />
         <Lighting />
         {/* phones get the arm alone; the rest of the bench is desktop-only */}

@@ -22,7 +22,10 @@ struct Vis {
 @group(0) @binding(1) var fields: texture_2d<f32>;
 @group(0) @binding(2) var fieldSampler: sampler;
 
-const N: i32 = 24; // the reference's `lite` sample count
+// Ray samples: 24 is the reference's `lite` count (High); the Low quality tier
+// uses the fs_low entry with half as many.
+const N_HIGH: i32 = 24;
+const N_LOW: i32 = 12;
 
 // Planck radiance (Wien limit) sampled at 620/540/460 nm, normalised to red at 3000 K
 fn thermal(K: f32) -> vec3f {
@@ -32,6 +35,15 @@ fn thermal(K: f32) -> vec3f {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  return glow(pos, N_HIGH);
+}
+
+@fragment
+fn fs_low(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  return glow(pos, N_LOW);
+}
+
+fn glow(pos: vec4f, N: i32) -> vec4f {
   let fc = vec2f(pos.x, vis.height - pos.y);
   let d = (fc - vis.fit.xy) / vis.fit.z;
   var q = d;

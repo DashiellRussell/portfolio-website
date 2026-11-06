@@ -25,3 +25,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# copied from detect-gpu at build time (scripts/copy-gpu-benchmarks.mjs)
+/public/gpu-benchmarks
