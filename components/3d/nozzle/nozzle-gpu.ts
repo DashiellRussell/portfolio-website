@@ -313,7 +313,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       params.write(rows.subarray(0, n * 8))
       counterA.write(zero)
       // the GPU half: 2n dispatches with fixed bindings, nothing set between them
-      frame(gpu, (f) =>
+      track(frame(gpu, (f) =>
         f.computePass({ label: "nozzle.solve" }, (pass) => {
           for (let i = 0; i < n; i++) {
             const [s1, s2] = steps[par]
@@ -323,12 +323,12 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
           }
           pass.dispatch(derives[par], groups[0], groups[1])
         })
-      )
+      ))
       parity = par
     }
 
     function draw(out: Target = view) {
-      frame(gpu, (f) => {
+      track(frame(gpu, (f) => {
         visual.set({ vis: { time: (performance.now() / 1000) * FLOW } })
         f.pass(VT, visual)
         blur.set({ blur: { dir: [2 / VT.size[0], 0], out: VB1a.size }, src: VT })
@@ -340,7 +340,17 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         blur.set({ blur: { dir: [0, 2 / VB2a.size[1]], out: VB2b.size }, src: VB2a })
         f.pass(VB2b, blur)
         f.pass(out, display)
-      })
+      }))
+    }
+
+    // Frames submitted but not yet finished on the GPU. A GPU that falls behind
+    // would otherwise queue work every tick without bound; the loop waits a
+    // tick instead, and the longer frame time makes the governor take fewer steps.
+    let inFlight = 0
+    function track(f: { done: Promise<void> }) {
+      inFlight++
+      const settle = () => void inFlight--
+      f.done.then(settle, settle)
     }
 
     // ambient air at rest, then light the engine at once: the warm start skips
@@ -401,6 +411,10 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
 
     function loop(now: number) {
       if (disposed) return
+      if (inFlight >= 4) {
+        raf = requestAnimationFrame(loop)
+        return
+      }
       if (!active) {
         // off screen: finish the warm-up gently without drawing, then stop
         // scheduling frames entirely until the card comes into view

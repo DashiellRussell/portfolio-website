@@ -546,6 +546,14 @@ function Parts() {
 function Lighting() {
   const { gl, scene } = useThree()
   useEffect(() => {
+    if ((gl as unknown as { isVgpuRenderer?: boolean }).isVgpuRenderer) {
+      // the vgpu renderer bakes this same RoomEnvironment itself (room-env.wgsl)
+      scene.userData.vgpuRoomEnvironment = true
+      scene.environmentIntensity = 0.45
+      return () => {
+        delete scene.userData.vgpuRoomEnvironment
+      }
+    }
     const pmrem = new THREE.PMREMGenerator(gl)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     scene.environment = env
@@ -719,6 +727,29 @@ function Framing({ armOnly }: { armOnly: boolean }) {
   return null
 }
 
+/**
+ * The bench renders through vgpu (WebGPU) when the browser has it: three.js
+ * keeps the scene graph, models and animation, and `VgpuRenderer` draws it.
+ * Without WebGPU, or with `?bench=webgl`, it is the usual WebGLRenderer.
+ */
+async function rendererFor(defaults: { canvas: unknown }) {
+  const canvas = defaults.canvas as HTMLCanvasElement
+  const wantGpu =
+    typeof navigator !== "undefined" &&
+    "gpu" in navigator &&
+    new URLSearchParams(window.location.search).get("bench") !== "webgl"
+  if (wantGpu) {
+    try {
+      // loaded with the card, so pages without it never download vgpu
+      const { createVgpuRenderer } = await import("./vgpu-three/renderer")
+      return (await createVgpuRenderer(canvas)) as unknown as THREE.WebGLRenderer
+    } catch (err) {
+      console.warn("[bench] WebGPU unavailable, falling back to WebGL", err)
+    }
+  }
+  return new THREE.WebGLRenderer({ ...(defaults as THREE.WebGLRendererParameters), antialias: true, alpha: true, powerPreference: "high-performance" })
+}
+
 export function RoboticsBench({
   className,
   style,
@@ -797,7 +828,7 @@ export function RoboticsBench({
         frameloop={visible && active && !still ? "always" : "demand"}
         dpr={dpr}
         camera={{ fov: 34, near: 0.01, far: 20 }}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        gl={rendererFor}
         onCreated={({ gl }) => {
           fastShaders(gl)
           gl.toneMapping = THREE.AgXToneMapping

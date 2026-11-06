@@ -97,6 +97,17 @@ The contact form in ContactSection submits to `/api/contact` which:
 - **Theme**: next-themes
 - **Analytics**: @vercel/analytics
 
+### WebGPU (vgpu)
+
+Two card visuals render through Vercel's [vgpu](https://vgpu.sh) on WebGPU, each with a WebGL fallback:
+- **Nozzle sim** (`components/3d/nozzle/`): the rocket engine CFD solver as vgpu compute kernels plus effects. `NozzleSim` falls back to the WebGL page `public/sims/nozzle.html` in an iframe (or with `?nozzle=webgl`). The pointer is a probe in the flow.
+- **Robot bench** (`components/3d/vgpu-three/`): `VgpuRenderer`, a three.js renderer drawn by vgpu. R3F, the models and the animation are unchanged; the `<Canvas gl>` factory in `robotics-bench.tsx` falls back to `WebGLRenderer` (or with `?bench=webgl`).
+
+Follow the vgpu docs that ship with the package (`npx vgpu docs cat getting-started.md`, `performance-playbook`, `shipping-to-production`):
+- `.wgsl` files are prepared at build time by the `wgslTurbopackRule()` in `next.config.mjs`; validate edits with `npx vgpu check <file>.wgsl`
+- pre-warm pipelines (`compile()` / `compileAsync`), share frame-wide values through `uniforms(gpu)`, and record repeating draws into bundles; `set()` only what changed
+- `?vgpu-debug` makes the bench render offscreen and exposes `window.__vgpuThree.readPixels()` for headless checks (headless Chromium's software WebGPU cannot present to a canvas)
+
 ## Development Notes
 
 ### Adding New Sections
