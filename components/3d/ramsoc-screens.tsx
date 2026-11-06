@@ -6,7 +6,7 @@ import { RoundedBox, useTexture } from "@react-three/drei"
 import * as THREE from "three"
 import { useOnScreenActive } from "@/components/space/on-screen"
 import { useIsMobile } from "@/components/space/use-mobile"
-import { Prewarm } from "./prewarm"
+import { Prewarm, fastShaders } from "./prewarm"
 
 /**
  * RAMSOC: the society's web platforms as floating browser windows on a
@@ -278,6 +278,7 @@ export function RamsocScreens() {
         camera={{ fov: 35, near: 0.1, far: 50 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {
+          fastShaders(gl)
           gl.toneMapping = THREE.AgXToneMapping
           gl.toneMappingExposure = 1.2
         }}

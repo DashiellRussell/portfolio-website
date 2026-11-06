@@ -7,7 +7,7 @@ import * as THREE from "three"
 import { observeVisibility } from "@/lib/canvas"
 import { useOnScreenActive } from "@/components/space/on-screen"
 import { useIsMobile } from "@/components/space/use-mobile"
-import { Prewarm } from "./prewarm"
+import { Prewarm, fastShaders } from "./prewarm"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 
@@ -799,6 +799,7 @@ export function RoboticsBench({
         camera={{ fov: 34, near: 0.01, far: 20 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {
+          fastShaders(gl)
           gl.toneMapping = THREE.AgXToneMapping
           gl.toneMappingExposure = 1.3
         }}

@@ -7,7 +7,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { NozzleSim, NOZZLE_BG } from "./nozzle-sim"
 import { useOnScreenActive } from "@/components/space/on-screen"
 import { useIsMobile } from "@/components/space/use-mobile"
-import { Prewarm } from "./prewarm"
+import { Prewarm, fastShaders } from "./prewarm"
 
 /**
  * UNSW Rocketry: a static-fire test range.
@@ -564,6 +564,7 @@ export function RocketRange() {
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
         onCreated={({ gl }) => {
+          fastShaders(gl)
           gl.toneMapping = THREE.AgXToneMapping
           gl.toneMappingExposure = 1.2
         }}
