@@ -1,6 +1,7 @@
 import type { DowngradeReason, QualityPreference, QualityState } from "./quality"
 import type { FrameHealthSample } from "./frame-health"
 import type { QualitySignals } from "./quality-signals"
+import type { TierResult } from "detect-gpu"
 
 /**
  * Site-wide render quality, following vgpu's adaptive-quality guide: every
@@ -52,6 +53,26 @@ export function downgradeQuality(reason: DowngradeReason) {
 const BENCHMARKS_URL = "/gpu-benchmarks"
 
 /**
+ * The GPU-tier lookup, once per page: it probes a WebGL context and fetches a
+ * benchmark table, so every card sharing one result (in idle time, never on a
+ * card's first frames) keeps it off the frames people are looking at.
+ */
+let gpuTier: Promise<TierResult> | null = null
+function sharedGpuTier(): Promise<TierResult> {
+  gpuTier ??= new Promise<void>((resolve) => {
+    const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+    if (ric) ric(() => resolve(), { timeout: 4000 })
+    else setTimeout(resolve, 1000)
+  })
+    .then(() => import("detect-gpu"))
+    .then(({ getGPUTier }) => getGPUTier({ benchmarksURL: BENCHMARKS_URL }))
+  return gpuTier
+}
+
+/** Frames right after the first one still carry start-up work (uploads, caches); they don't count. */
+const SETTLE_MS = 1500
+
+/**
  * One renderer's view of the signals. Call `frame()` once per animation tick;
  * the signals arm themselves after the first presented frame (a rAF, then a
  * timeout, then a dynamic import), so neither their code nor detect-gpu's
@@ -62,6 +83,7 @@ export function qualityProbe() {
   let signals: QualitySignals | null = null
   let scheduled = false
   let disposed = false
+  let firstFrameAt = 0
 
   const stop = () => {
     signals?.dispose()
@@ -80,7 +102,7 @@ export function qualityProbe() {
         void import("./quality-signals")
           .then(({ createQualitySignals }) => {
             if (disposed || state.effective !== "high") return
-            signals = createQualitySignals({ onDowngrade: downgradeQuality, benchmarksUrl: BENCHMARKS_URL })
+            signals = createQualitySignals({ onDowngrade: downgradeQuality, loadGpuTier: sharedGpuTier })
           })
           .catch(() => {
             // advisory: if the signals fail to load, stay on High
@@ -93,8 +115,12 @@ export function qualityProbe() {
     /** One sample per animation tick, while this renderer is on screen and animating. */
     frame(sample: FrameHealthSample) {
       if (disposed || state.preference !== "auto" || state.effective !== "high") return
+      const now = performance.now()
+      if (sample.rendered && !firstFrameAt) firstFrameAt = now
       if (sample.rendered) arm()
-      signals?.recordFrame(sample)
+      // nothing presented yet, or still settling: not a verdict on this device
+      const settled = firstFrameAt > 0 && now - firstFrameAt > SETTLE_MS
+      signals?.recordFrame(settled ? sample : { ...sample, active: false })
     },
     /** After a resize or anything else that legitimately changes the frame rate. */
     reset() {

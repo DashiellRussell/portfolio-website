@@ -88,6 +88,139 @@ interface Rec {
   transparent: boolean
   renderOrder: number
   z: number
+  /** Pipeline compiled (asynchronously) and every texture uploaded. */
+  compiled: boolean
+  texturesLoaded: boolean
+  pending: Promise<void>
+}
+
+interface TextureEntry {
+  tex: Texture
+  version: number
+  loaded: boolean
+  ready: Promise<void>
+}
+
+/**
+ * What every bench renderer shares for the life of the page: the device, the
+ * baked environment, three's DFG table, samplers and uploaded geometry. The
+ * card unmounts whenever it is a screen away; sharing this means coming back
+ * to it costs a surface and a few draws, not a new device, a re-bake and a
+ * recompile of the lighting shader.
+ */
+interface Shared {
+  gpu: Gpu
+  env: Target
+  dfg: Texture
+  white: Texture
+  mapSampler: GPUSampler
+  clampSampler: GPUSampler
+  geometries: WeakMap<THREE.BufferGeometry, Geometry>
+}
+
+let shared: Promise<Shared> | null = null
+let warmed: Promise<void> | null = null
+
+function sharedContext(): Promise<Shared> {
+  if (shared) return shared
+  const p = (async (): Promise<Shared> => {
+    const gpu = await init({ powerPreference: "high-performance" })
+    gpu.onError((e) => {
+      const err = e as { code?: string; message?: string; detail?: unknown }
+      console.error("[vgpu-three]", err.code, err.message, err.detail ?? "")
+    })
+    // a lost device takes everything with it: start over on the next mount
+    void gpu.lost.then(() => {
+      if (shared === p) shared = warmed = null
+    })
+
+    // three's DFG LUT for the split-sum terms
+    const dfg = texture(gpu, { kind: "2d", size: [16, 16], format: "rg16float", usage: ["texture_binding", "copy_dst"] })
+    gpu.gpu.queue.writeTexture({ texture: dfg.gpu }, DFG_LUT, { bytesPerRow: 16 * 4 }, [16, 16])
+    // stands in for an absent map / alphaMap
+    const white = texture(gpu, { kind: "2d", size: [1, 1], format: "rgba8unorm", usage: ["texture_binding", "copy_dst"] })
+    gpu.gpu.queue.writeTexture({ texture: white.gpu }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1])
+    const clampSampler = sampler(gpu, { minFilter: "linear", magFilter: "linear", addressModeU: "clamp-to-edge", addressModeV: "clamp-to-edge" })
+    const mapSampler = sampler(gpu, {
+      minFilter: "linear",
+      magFilter: "linear",
+      mipmapFilter: "linear",
+      addressModeU: "clamp-to-edge",
+      addressModeV: "clamp-to-edge",
+      maxAnisotropy: 8,
+    })
+
+    // Bake the room environment once (vgpu: "bake static inputs once").
+    const env = target(gpu, { size: [256, 288], format: "rgba16float" })
+    const bake = effect(gpu, roomEnvShader, { label: "vgpu-three.room-env", set: { bake: { rect: [0, 0, 1, 1], roughness: 0, samples: 0 } } })
+    await bake.compile(env)
+    frame(gpu, (f) => {
+      ENV_LEVELS.forEach((level, i) => {
+        const [x, y, w, h] = level.rect
+        bake.set({ bake: { rect: level.rect, roughness: i / (ENV_LEVELS.length - 1), samples: level.samples } })
+        f.pass({ target: env, clear: i === 0 ? [0, 0, 0, 1] : false, viewport: { x, y, width: w, height: h }, scissor: [x, y, w, h] }, bake)
+      })
+    })
+    return { gpu, env, dfg, white, mapSampler, clampSampler, geometries: new WeakMap() }
+  })()
+  shared = p
+  p.catch(() => {
+    if (shared === p) shared = null
+  })
+  return p
+}
+
+/** Pipeline state for a material: what the draw options depend on. */
+function drawState(material: Mat, mirrored: boolean) {
+  const transparent = material.transparent || (material.transmission ?? 0) > 0
+  return {
+    transparent,
+    cull: (material.side === THREE.DoubleSide ? "none" : material.side === THREE.BackSide ? "front" : "back") as "none" | "front" | "back",
+    // a mirrored world matrix flips the winding, as three flips frontFace
+    frontFace: (mirrored ? "cw" : "ccw") as "cw" | "ccw",
+    blend: transparent ? BLEND_NORMAL : undefined,
+    depth: { write: material.depthWrite, compare: (material.depthTest ? "less-equal" : "always") as GPUCompareFunction },
+  }
+}
+
+/**
+ * Brings up the shared device, bakes the environment and compiles the
+ * lighting shader for the pipeline states the bench uses, against the canvas
+ * render signature (preferred format, depth24plus, 4x MSAA). Call it when the
+ * browser is idle: the bench then mounts onto warm pipelines instead of
+ * compiling while it scrolls into view. Pipelines are cached device-wide, so
+ * the real draws reuse these.
+ */
+export function prewarmVgpu(): Promise<void> {
+  warmed ??= sharedContext().then(async (ctx) => {
+    const { gpu } = ctx
+    const signature = { colors: [navigator.gpu.getPreferredCanvasFormat()], depth: "depth24plus" as GPUTextureFormat, sampleCount: 4 as const }
+    const tri = geometry(gpu, {
+      label: "vgpu-three.warm",
+      buffers: [
+        { attributes: { position: "float32x3" }, data: new Float32Array(9) },
+        { attributes: { normal: "float32x3" }, data: new Float32Array(9) },
+        { attributes: { uv: "float32x2" }, data: new Float32Array(6) },
+      ],
+      indices: new Uint16Array([0, 1, 2, 0]),
+    })
+    const states: Mat[] = []
+    for (const side of [THREE.FrontSide, THREE.DoubleSide]) {
+      states.push({ side, transparent: false, depthWrite: true, depthTest: true } as Mat)
+      states.push({ side, transparent: true, depthWrite: false, depthTest: true } as Mat)
+      states.push({ side, transparent: true, depthWrite: true, depthTest: true } as Mat)
+    }
+    await Promise.all(
+      states.map((m) => {
+        const { transparent: _t, ...options } = drawState(m, false)
+        const d = draw(gpu, { label: "vgpu-three.warm", shader: standardShader, geometry: tri, ...options })
+        return d.compile(signature).then(() => d.dispose())
+      })
+    )
+    tri.destroy()
+  })
+  warmed.catch(() => (warmed = null))
+  return warmed
 }
 
 export class VgpuRenderer {
@@ -114,85 +247,63 @@ export class VgpuRenderer {
   private pixelRatio = 1
   private disposed = false
   private readonly recs = new Map<THREE.Mesh, Rec>()
-  private readonly geometries = new WeakMap<THREE.BufferGeometry, Geometry>()
-  private readonly textures = new WeakMap<THREE.Texture, { tex: Texture; version: number }>()
+  private readonly textures = new WeakMap<THREE.Texture, TextureEntry>()
+  private whiteEntry!: TextureEntry
+  /** True while some visible mesh is still compiling or uploading; nothing is drawn meanwhile. */
+  loading = true
   private readonly n3 = new THREE.Matrix3()
   private readonly v3 = new THREE.Vector3()
   private readonly v3b = new THREE.Vector3()
 
+  private readonly gpu: Gpu
+  private readonly env: Target
+  private readonly dfg: Texture
+  private readonly white: Texture
+  private readonly mapSampler: GPUSampler
+  private readonly clampSampler: GPUSampler
+  private readonly geometries: WeakMap<THREE.BufferGeometry, Geometry>
+  /** Textures this renderer uploaded, released with it. */
+  private readonly owned: Texture[] = []
+
   private constructor(
     canvas: HTMLCanvasElement,
-    private readonly gpu: Gpu,
+    ctx: Shared,
     private readonly view: Surface,
-    private readonly sceneU: ReturnType<typeof uniforms>,
-    private readonly env: Target,
-    private readonly dfg: Texture,
-    private readonly white: Texture,
-    private readonly mapSampler: GPUSampler,
-    private readonly clampSampler: GPUSampler
+    private readonly sceneU: ReturnType<typeof uniforms>
   ) {
     this.domElement = canvas
+    this.gpu = ctx.gpu
+    this.env = ctx.env
+    this.dfg = ctx.dfg
+    this.white = ctx.white
+    this.mapSampler = ctx.mapSampler
+    this.clampSampler = ctx.clampSampler
+    this.geometries = ctx.geometries
   }
 
   static async create(canvas: HTMLCanvasElement): Promise<VgpuRenderer> {
-    const gpu = await init({ powerPreference: "high-performance" })
-    try {
-      gpu.onError((e) => {
-        const err = e as { code?: string; message?: string; detail?: unknown }
-        console.error("[vgpu-three]", err.code, err.message, err.detail ?? "")
-      })
-      const view = surface(gpu, canvas, { size: [1, 1], depth: true, msaa: true, alphaMode: "premultiplied", clearColor: [0, 0, 0, 0] })
-
-      // three's DFG LUT for the split-sum terms
-      const dfg = texture(gpu, { kind: "2d", size: [16, 16], format: "rg16float", usage: ["texture_binding", "copy_dst"] })
-      gpu.gpu.queue.writeTexture({ texture: dfg.gpu }, DFG_LUT, { bytesPerRow: 16 * 4 }, [16, 16])
-      // stands in for an absent map / alphaMap
-      const white = texture(gpu, { kind: "2d", size: [1, 1], format: "rgba8unorm", usage: ["texture_binding", "copy_dst"] })
-      gpu.gpu.queue.writeTexture({ texture: white.gpu }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1])
-      const clampSampler = sampler(gpu, { minFilter: "linear", magFilter: "linear", addressModeU: "clamp-to-edge", addressModeV: "clamp-to-edge" })
-      const mapSampler = sampler(gpu, {
-        minFilter: "linear",
-        magFilter: "linear",
-        mipmapFilter: "linear",
-        addressModeU: "clamp-to-edge",
-        addressModeV: "clamp-to-edge",
-        maxAnisotropy: 8,
-      })
-
-      // Bake the room environment once (vgpu: "bake static inputs once").
-      const env = target(gpu, { size: [256, 288], format: "rgba16float" })
-      const bake = effect(gpu, roomEnvShader, { label: "vgpu-three.room-env", set: { bake: { rect: [0, 0, 1, 1], roughness: 0, samples: 0 } } })
-      await bake.compile(env)
-      frame(gpu, (f) => {
-        ENV_LEVELS.forEach((level, i) => {
-          const [x, y, w, h] = level.rect
-          bake.set({ bake: { rect: level.rect, roughness: i / (ENV_LEVELS.length - 1), samples: level.samples } })
-          f.pass({ target: env, clear: i === 0 ? [0, 0, 0, 1] : false, viewport: { x, y, width: w, height: h }, scissor: [x, y, w, h] }, bake)
-        })
-      })
-
-      const sceneU = uniforms(gpu, {
-        viewProj: new Float32Array(16),
-        cameraPos: [0, 0, 0],
-        exposure: 1,
-        ambient: [0, 0, 0],
-        envIntensity: 0,
-        dirDir: [[0, 1, 0, 0], [0, 1, 0, 0]],
-        dirColor: [[0, 0, 0, 0], [0, 0, 0, 0]],
-        pointPos: [[0, 0, 0, 0], [0, 0, 0, 0]],
-        pointColor: [[0, 0, 0, 2], [0, 0, 0, 2]],
-        counts: [0, 0, 0, 0],
-      })
-      const renderer = new VgpuRenderer(canvas, gpu, view, sceneU, env, dfg, white, mapSampler, clampSampler)
-      if (typeof location !== "undefined" && new URLSearchParams(location.search).has("vgpu-debug")) {
-        renderer.offscreen = target(gpu, { size: [1, 1], format: view.format, depth: true, msaa: true })
-        ;(window as unknown as { __vgpuThree?: VgpuRenderer }).__vgpuThree = renderer
-      }
-      return renderer
-    } catch (err) {
-      gpu.dispose()
-      throw err
+    const ctx = await sharedContext()
+    void prewarmVgpu()
+    const { gpu } = ctx
+    const view = surface(gpu, canvas, { size: [1, 1], depth: true, msaa: true, alphaMode: "premultiplied", clearColor: [0, 0, 0, 0] })
+    const sceneU = uniforms(gpu, {
+      viewProj: new Float32Array(16),
+      cameraPos: [0, 0, 0],
+      exposure: 1,
+      ambient: [0, 0, 0],
+      envIntensity: 0,
+      dirDir: [[0, 1, 0, 0], [0, 1, 0, 0]],
+      dirColor: [[0, 0, 0, 0], [0, 0, 0, 0]],
+      pointPos: [[0, 0, 0, 0], [0, 0, 0, 0]],
+      pointColor: [[0, 0, 0, 2], [0, 0, 0, 2]],
+      counts: [0, 0, 0, 0],
+    })
+    const renderer = new VgpuRenderer(canvas, ctx, view, sceneU)
+    if (typeof location !== "undefined" && new URLSearchParams(location.search).has("vgpu-debug")) {
+      renderer.offscreen = target(gpu, { size: [1, 1], format: view.format, depth: true, msaa: true })
+      ;(window as unknown as { __vgpuThree?: VgpuRenderer }).__vgpuThree = renderer
     }
+    return renderer
   }
 
   /* ------------------------------------------------- WebGLRenderer surface */
@@ -237,12 +348,15 @@ export class VgpuRenderer {
   /** Uploads every mesh in `scene` and compiles its pipeline without blocking. */
   async compileAsync(scene: THREE.Object3D, _camera?: THREE.Camera) {
     scene.updateMatrixWorld()
-    const draws = new Set<Draw>()
+    const pending: Promise<void>[] = []
     scene.traverse((o) => {
       const rec = this.rec(o as THREE.Mesh)
-      if (rec) draws.add(rec.draw)
+      if (rec) {
+        this.sync(o as THREE.Mesh, rec)
+        pending.push(rec.pending)
+      }
     })
-    await Promise.all([...draws].map((d) => d.compile(this.view)))
+    await Promise.all(pending)
   }
   compile(scene: THREE.Object3D, camera?: THREE.Camera) {
     void this.compileAsync(scene, camera)
@@ -254,16 +368,20 @@ export class VgpuRenderer {
   dispose() {
     if (this.disposed) return
     this.disposed = true
+    // this canvas's resources only: the device, environment and uploaded
+    // geometry are shared with the next mount
     this.bundles?.forEach((b) => b.dispose())
     this.bundles = null
+    for (const rec of this.recs.values()) rec.draw.dispose()
     this.recs.clear()
-    this.gpu.dispose()
+    this.owned.forEach((t) => t.destroy())
+    this.view.dispose()
   }
 
   /* ---------------------------------------------------------------- render */
 
   render(scene: THREE.Scene, camera: THREE.Camera) {
-    if (this.disposed || this.gpu.disposed) return
+    if (this.disposed || this.gpu.disposed || this.view.disposed) return
     // A GPU that can't keep up would otherwise queue a frame per tick without
     // bound; drop this tick instead, and the next one renders the newer state.
     if (this.inFlight >= MAX_IN_FLIGHT) return
@@ -290,6 +408,13 @@ export class VgpuRenderer {
     })
     // forget meshes that left the scene
     for (const mesh of this.recs.keys()) if (!seen.has(mesh) && !mesh.parent) this.drop(mesh)
+
+    // Nothing is drawn until every visible mesh has compiled and uploaded:
+    // pipelines compile asynchronously and textures upload off the main
+    // thread, so a frame never blocks on either (vgpu: never compile on the
+    // visible frame), and the scene appears whole instead of piece by piece.
+    this.loading = !visible.every((r) => r.compiled && r.texturesLoaded)
+    if (this.loading) return
 
     // Record the scene into two bundles (opaque, then transparent) and replay
     // them every frame: vgpu's default for draws that repeat. Re-record only
@@ -393,18 +518,12 @@ export class VgpuRenderer {
     if (existing && existing.geometry === mesh.geometry && existing.material === material && existing.mirrored === mirrored) return existing
     if (existing) this.drop(mesh)
 
-    const transparent = material.transparent || (material.transmission ?? 0) > 0
-    const cull: "none" | "front" | "back" =
-      material.side === THREE.DoubleSide ? "none" : material.side === THREE.BackSide ? "front" : "back"
+    const { transparent, ...options } = drawState(material, mirrored)
     const d = draw(this.gpu, {
       label: mesh.name || "mesh",
       shader: standardShader,
       geometry: this.geometry(mesh.geometry),
-      cull,
-      // a mirrored world matrix flips the winding, as three flips frontFace
-      frontFace: mirrored ? "cw" : "ccw",
-      blend: transparent ? BLEND_NORMAL : undefined,
-      depth: { write: material.depthWrite, compare: material.depthTest ? "less-equal" : "always" },
+      ...options,
       set: {
         scene: this.sceneU,
         envAtlas: this.env,
@@ -413,8 +532,30 @@ export class VgpuRenderer {
         mapSampler: this.mapSampler,
       },
     })
-    const rec: Rec = { draw: d, geometry: mesh.geometry, material, mirrored, matrix: new Float32Array(16).fill(NaN), matSig: "", transparent, renderOrder: mesh.renderOrder, z: 0 }
-    this.sync(mesh, rec)
+    const rec: Rec = {
+      draw: d,
+      geometry: mesh.geometry,
+      material,
+      mirrored,
+      matrix: new Float32Array(16).fill(NaN),
+      matSig: "",
+      transparent,
+      renderOrder: mesh.renderOrder,
+      z: 0,
+      compiled: false,
+      texturesLoaded: false,
+      pending: Promise.resolve(),
+    }
+    const compiled = d.compile(this.view).then(
+      () => void (rec.compiled = true),
+      (err) => {
+        // drawn anyway: a lazy compile reports through gpu.onError
+        console.warn("[vgpu-three] pipeline failed to compile", mesh.name, err)
+        rec.compiled = true
+      }
+    )
+    const textures = Promise.all([this.texture(material.map, true).ready, this.texture(material.alphaMap, false).ready]).then(() => {})
+    rec.pending = Promise.all([compiled, textures]).then(() => {})
     this.recs.set(mesh, rec)
     return rec
   }
@@ -445,10 +586,17 @@ export class VgpuRenderer {
       })
     }
     const m = rec.material
-    const sig = materialSignature(m, this)
+    const map = this.texture(m.map, true)
+    const alphaMap = this.texture(m.alphaMap, false)
+    rec.texturesLoaded = map.loaded && alphaMap.loaded
+    const sig = materialSignature(m, this) + (rec.texturesLoaded ? "|loaded" : "|loading")
     if (sig !== rec.matSig) {
       rec.matSig = sig
-      rec.draw.set({ material: materialValues(m), map: this.texture(m.map, true), alphaMap: this.texture(m.alphaMap, false) })
+      rec.draw.set({
+        material: materialValues(m),
+        map: map.loaded ? map.tex : this.white,
+        alphaMap: alphaMap.loaded ? alphaMap.tex : this.white,
+      })
     }
   }
 
@@ -495,15 +643,22 @@ export class VgpuRenderer {
     return geo
   }
 
-  /** Uploads a canvas/image texture with a mip chain built on the CPU. */
-  private texture(t: THREE.Texture | null | undefined, color: boolean): Texture {
-    if (!t || !t.image) return this.white
+  /**
+   * Uploads a canvas/image texture with its mip chain. Each level is resized
+   * by createImageBitmap, which runs off the main thread; building the chain
+   * with 2D-canvas downscales on the main thread was a ~1 s stall for the
+   * floor's 1024px texture. Until it lands the draw binds a white texel and
+   * is held out of the frame (see `loading`).
+   */
+  private texture(t: THREE.Texture | null | undefined, color: boolean): TextureEntry {
+    this.whiteEntry ??= { tex: this.white, version: 0, loaded: true, ready: Promise.resolve() }
+    if (!t || !t.image) return this.whiteEntry
     const cached = this.textures.get(t)
-    if (cached && cached.version === t.version) return cached.tex
+    if (cached && cached.version === t.version) return cached
     const img = t.image as HTMLCanvasElement | HTMLImageElement | ImageBitmap
     const w = (img as HTMLCanvasElement).width
     const h = (img as HTMLCanvasElement).height
-    if (!w || !h) return this.white
+    if (!w || !h) return this.whiteEntry
     const levels = Math.floor(Math.log2(Math.max(w, h))) + 1
     const srgb = color && t.colorSpace === THREE.SRGBColorSpace
     const tex = texture(this.gpu, {
@@ -513,31 +668,41 @@ export class VgpuRenderer {
       mipLevelCount: levels,
       usage: ["texture_binding", "copy_dst", "render_attachment"],
     })
-    let src: CanvasImageSource = img
-    let sw = w
-    let sh = h
-    for (let level = 0; level < levels; level++) {
-      this.gpu.gpu.queue.copyExternalImageToTexture({ source: src as GPUCopyExternalImageSource, flipY: t.flipY }, { texture: tex.gpu, mipLevel: level }, [sw, sh])
-      if (level === levels - 1) break
-      const nw = Math.max(1, sw >> 1)
-      const nh = Math.max(1, sh >> 1)
-      const c = document.createElement("canvas")
-      c.width = nw
-      c.height = nh
-      const g = c.getContext("2d")!
-      g.imageSmoothingQuality = "high"
-      g.drawImage(src, 0, 0, nw, nh)
-      src = c
-      sw = nw
-      sh = nh
-    }
+    this.owned.push(tex)
+    const entry: TextureEntry = { tex, version: t.version, loaded: false, ready: Promise.resolve() }
+    entry.ready = (async () => {
+      try {
+        const bitmaps = await Promise.all(
+          Array.from({ length: levels }, (_, level) => {
+            const lw = Math.max(1, w >> level)
+            const lh = Math.max(1, h >> level)
+            return level === 0
+              ? createImageBitmap(img)
+              : createImageBitmap(img, { resizeWidth: lw, resizeHeight: lh, resizeQuality: "high" })
+          })
+        )
+        if (this.disposed) return bitmaps.forEach((b) => b.close())
+        bitmaps.forEach((bitmap, level) => {
+          this.gpu.gpu.queue.copyExternalImageToTexture(
+            { source: bitmap, flipY: t.flipY },
+            { texture: tex.gpu, mipLevel: level },
+            [bitmap.width, bitmap.height]
+          )
+          bitmap.close()
+        })
+      } catch (err) {
+        console.warn("[vgpu-three] texture upload failed", err)
+      }
+      entry.loaded = true
+    })()
     if (cached) {
       // a different texture bound after recording stales the bundles
       this.bundleRecs = []
-      cached.tex.destroy()
+      const old = cached.tex
+      void entry.ready.then(() => old.destroy())
     }
-    this.textures.set(t, { tex, version: t.version })
-    return tex
+    this.textures.set(t, entry)
+    return entry
   }
 }
 

@@ -734,7 +734,7 @@ function Framing({ armOnly }: { armOnly: boolean }) {
  * frame counter moved (the vgpu renderer skips ticks when the GPU is behind).
  */
 function QualityProbe({ running }: { running: boolean }) {
-  const gl = useThree((s) => s.gl) as unknown as { info: { render: { frame: number } } }
+  const gl = useThree((s) => s.gl) as unknown as { info: { render: { frame: number } }; loading?: boolean }
   const probe = useMemo(() => qualityProbe(), [])
   useEffect(() => () => probe.dispose(), [probe])
   const last = useRef({ t: 0, frame: -1 })
@@ -742,11 +742,31 @@ function QualityProbe({ running }: { running: boolean }) {
     const now = performance.now()
     const frame = gl.info.render.frame
     if (last.current.t) {
-      probe.frame({ deltaMs: now - last.current.t, active: running && !document.hidden, rendered: frame !== last.current.frame })
+      probe.frame({
+        deltaMs: now - last.current.t,
+        // the vgpu renderer draws nothing while it is still compiling/uploading
+        active: running && !document.hidden && !gl.loading,
+        rendered: frame !== last.current.frame,
+      })
     }
     last.current = { t: now, frame }
   })
   return null
+}
+
+// While the browser is idle, fetch the vgpu renderer and warm it up (device,
+// baked environment, compiled lighting pipelines), so the card mounts onto a
+// ready renderer instead of doing all of that as it scrolls into view.
+if (typeof window !== "undefined" && "gpu" in navigator && new URLSearchParams(window.location.search).get("bench") !== "webgl") {
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+  const prefetch = () =>
+    void import("./vgpu-three/renderer")
+      .then((m) => m.prewarmVgpu())
+      .catch(() => {
+        // advisory: the card does the same work itself when it mounts
+      })
+  if (ric) ric(prefetch, { timeout: 5000 })
+  else setTimeout(prefetch, 2000)
 }
 
 /**
