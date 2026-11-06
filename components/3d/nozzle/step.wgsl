@@ -167,15 +167,42 @@ fn update(c: vec2i, U0: vec4f, U: vec4f, W: vec4f, Fe: vec4f, Fw: vec4f, Gn: vec
   if (probe.strength > 0.0) {
     let w = ss(probe.radius, probe.radius * 0.45, distance(p, probe.pos)) * probe.strength;
     if (w > 0.0) {
-      // swap the momentum, keep density and pressure
+      // Swap the momentum, keep density and pressure. Radial velocity has to
+      // vanish on the axis (the source term above divides by r), so the
+      // probe's radial push fades out over its own radius toward the axis;
+      // forcing flow through the centreline is what blew the solver up.
+      let pushTo = vec2f(probe.vel.x, probe.vel.y * saturate(p.y / probe.radius));
       var Wn = toPrim(Un);
-      Wn = vec4f(Wn.x, mix(Wn.yz, probe.vel, w * 0.35), Wn.w);
+      Wn = vec4f(Wn.x, mix(Wn.yz, pushTo, w * 0.35), Wn.w);
       Un = toCons(Wn);
     }
   }
   Un.x = max(Un.x, 1e-4);
   Un.w = max(Un.w, 0.5 * (Un.y * Un.y + Un.z * Un.z) / Un.x + 1e-4 / (GAM - 1.0));
-  return Un;
+  return guard(Un);
+}
+
+// Last line of defence: a non-finite cell would spread to the whole grid in a
+// few steps and stay there (the flame "goes out forever"), so it is replaced by
+// still ambient air and the reservoir refills the plume. Speed and temperature
+// are capped far above anything the plume reaches (|u| ~4.8, T ~4.4) and below
+// what the fixed time step can carry, so normal flow never touches them.
+const V_CAP: f32 = 9.0;
+const T_CAP: f32 = 10.0;
+
+fn finite(u: vec4f) -> bool {
+  // bit test rather than u != u: shader compilers may assume NaN never occurs
+  let e = bitcast<vec4u>(u) & vec4u(0x7f800000u);
+  return all(e != vec4u(0x7f800000u));
+}
+
+fn guard(U: vec4f) -> vec4f {
+  if (!finite(U)) { return toCons(vec4f(1.0, 0.0, 0.0, 1.0)); }
+  let W = toPrim(U);
+  let speed = length(W.yz);
+  if (speed <= V_CAP && W.w <= T_CAP * W.x) { return U; }
+  let v = W.yz * min(1.0, V_CAP / max(speed, 1e-6));
+  return toCons(vec4f(W.x, v, min(W.w, T_CAP * W.x)));
 }
 
 fn inDomain(c: vec2i, n: vec2i) -> bool {
