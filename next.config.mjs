@@ -7,11 +7,12 @@ const dev = process.env.NODE_ENV !== "production"
  * ('unsafe-inline' covers the inline bootstrap scripts Next writes into every
  * page; nonces would force every page to render dynamically). 'wasm-unsafe-eval'
  * lets the meshopt decoder compile its WebAssembly. Dev adds 'unsafe-eval' for
- * React's dev tooling and websockets for hot reload.
+ * React's dev tooling, websockets for hot reload and Vercel Analytics' debug
+ * script (production loads it from this origin).
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
   // the WebGL fallback page (public/sims/nozzle.html) loads its font from Google
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
