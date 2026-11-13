@@ -27,3 +27,6 @@ yarn-error.log*
 next-env.d.ts
 # copied from detect-gpu at build time (scripts/copy-gpu-benchmarks.mjs)
 /public/gpu-benchmarks
+# encrypted per build from assets/models (scripts/pack-models.mjs)
+/public/_m
+/components/3d/models.generated.ts

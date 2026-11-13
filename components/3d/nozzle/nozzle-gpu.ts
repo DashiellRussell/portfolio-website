@@ -11,6 +11,7 @@ import {
   type Compute,
   type Effect,
   type Gpu,
+  type Texture,
   type StorageBuffer,
   type Target,
   uniforms,
@@ -19,6 +20,7 @@ import {
 import initShader from "./init.wgsl"
 import stepShader from "./step.wgsl"
 import deriveShader from "./derive.wgsl"
+import projectShader from "./project.wgsl"
 import visualShader from "./visual.wgsl"
 import blurShader from "./blur.wgsl"
 import displayShader from "./display.wgsl"
@@ -43,7 +45,12 @@ import { qualityProbe, qualityState, subscribeQuality } from "../quality/store"
  *    framebuffer binds, program switches and ~2,600 uniform calls;
  *  - pipelines compile asynchronously before the first frame, so mounting the
  *    card never blocks on shader compilation;
- *  - no iframe: no second document, layout pass or font load per card.
+ *  - no iframe: no second document, layout pass or font load per card;
+ *  - the glow is integrated in sim space, not per pixel: the plume is
+ *    axisymmetric, so a ray's glow depends only on where it crosses the axis
+ *    plane. project.wgsl integrates that once per texel of a fixed half-plane
+ *    grid at the solver's own resolution, and the screen pass is one bilinear
+ *    fetch, so the costliest pass no longer scales with the canvas size.
  */
 
 export interface NozzleOptions {
@@ -106,6 +113,11 @@ const MAX_STAGES = 2 * Math.max(MAX_STEPS, MAX_STEPS_LOW, WARM_STEPS_ACTIVE)
 const KEROLOX = { soot: 1.0, band: [0.3, 0.4, 1.0] as [number, number, number], bandK: 0.0, expo: 45.0 }
 
 const TILE: [number, number] = [16, 8]
+
+/** The projected glow covers x in [0, PROJ_SPAN[0]] (the longest displayed length) and |y| in [0, 0.5]. */
+const PROJ_SPAN: [number, number] = [3.0, 0.5]
+/** Projection texels per sim unit: the solver's resolution on High, half that on Low. */
+const projDensity = (t: QualityTier) => (t === "low" ? 0.5 : 1) * (NR / RD)
 
 // Pointer probe: radius in sim units (the nozzle exit radius is ~0.1), and the
 // fastest it can push the gas, in sim units per sim time (the core jet runs ~4).
@@ -175,8 +187,10 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     const linear = sampler(gpu, { minFilter: "linear", magFilter: "linear" })
     const view = surface(gpu, canvas, { dpr: 1, alphaMode: "opaque" })
     // Quality tier (vgpu's adaptive-quality pattern; components/3d/quality):
-    //   High  glow ray-marched at half resolution, 24 samples, up to 120 steps a frame
-    //   Low   glow at quarter resolution, 12 samples (fs_low), up to 60 steps a frame
+    //   High  glow projected at the solver's resolution with 24 samples, drawn at
+    //         half resolution; up to 120 steps a frame
+    //   Low   projection at half that resolution with 12 samples, drawn at
+    //         quarter resolution; up to 60 steps a frame
     let tier: QualityTier = qualityState().effective
     const glowShift = () => (tier === "low" ? 2 : 1)
     const half = () => [Math.max(2, view.size[0] >> glowShift()), Math.max(2, view.size[1] >> glowShift())] as const
@@ -189,13 +203,39 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     const VB2a = target(gpu, { size: twentieth(), ...hdr })
     const VB2b = target(gpu, { size: twentieth(), ...hdr })
 
-    const mkVisual = (t: QualityTier) =>
-      effect(gpu, visualShader, {
-        label: `nozzle.visual.${t}`,
-        entry: { fragment: t === "low" ? "fs_low" : "fs_main" },
-        set: { fields, fieldSampler: linear },
+    // The glow projection (project.wgsl): fixed size per tier, so it never
+    // follows the canvas. Low halves the texels each way and the ray samples.
+    type Projection = { tex: Texture; kernel: Compute; groups: [number, number] }
+    const mkProjection = (t: QualityTier): Projection => {
+      const size: [number, number] = [Math.ceil(PROJ_SPAN[0] * projDensity(t)), Math.ceil(PROJ_SPAN[1] * projDensity(t))]
+      const tex = texture(gpu, { kind: "2d", size, format: "rgba16float", usage: ["storage_binding", "texture_binding"] })
+      const kernel = compute(gpu, projectShader, {
+        label: `nozzle.project.${t}`,
+        constants: { SAMPLES: t === "low" ? 12 : 24 },
+        set: {
+          proj: {
+            size,
+            span: PROJ_SPAN,
+            ext: [NX * H, NR * H],
+            band: KEROLOX.band,
+            soot: KEROLOX.soot,
+            bandK: KEROLOX.bandK,
+            tK: 875,
+            time: 0,
+            turb: TURB,
+          },
+          fields,
+          fieldSampler: linear,
+          glowOut: tex,
+        },
       })
-    let visual: Effect = mkVisual(tier)
+      return { tex, kernel, groups: [Math.ceil(size[0] / TILE[0]), Math.ceil(size[1] / TILE[1])] }
+    }
+    let projection = mkProjection(tier)
+    const visual: Effect = effect(gpu, visualShader, {
+      label: "nozzle.visual",
+      set: { glowTex: projection.tex, glowSampler: linear },
+    })
     const blur: Effect = effect(gpu, blurShader, { label: "nozzle.blur", set: { srcSampler: linear } })
     const display: Effect = effect(gpu, displayShader, {
       label: "nozzle.display",
@@ -207,6 +247,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       ...steps.map((s) => s.compile()),
       ...derives.map((d) => d.compile()),
       reset.compile(),
+      projection.kernel.compile(),
       visual.compile(VT),
       blur.compile(VB1a),
       display.compile(view),
@@ -264,15 +305,9 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         vis: {
           fit: [(FIT[0] * VT.size[0]) / W, (FIT[1] * VT.size[1]) / Hc, (FIT[2] * VT.size[0]) / W],
           rot: ROT ? 1 : 0,
-          ext: [NX * H, NR * H],
+          span: PROJ_SPAN,
           xv: XV,
           height: VT.size[1],
-          band: KEROLOX.band,
-          soot: KEROLOX.soot,
-          bandK: KEROLOX.bandK,
-          tK: 875,
-          time: 0,
-          turb: TURB,
         },
       })
     }
@@ -333,7 +368,9 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
 
     function draw(out: Target = view) {
       track(frame(gpu, (f) => {
-        visual.set({ vis: { time: (performance.now() / 1000) * FLOW } })
+        const { kernel, groups: pg } = projection
+        kernel.set({ proj: { time: (performance.now() / 1000) * FLOW } })
+        f.computePass({ label: "nozzle.project" }, (pass) => pass.dispatch(kernel, pg[0], pg[1]))
         f.pass(VT, visual)
         blur.set({ blur: { dir: [2 / VT.size[0], 0], out: VB1a.size }, src: VT })
         f.pass(VB1a, blur)
@@ -424,22 +461,28 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       lastTick = now
     }
 
-    // High -> Low, once: build and compile the Low glow pass while High keeps
+    // High -> Low, once: build and compile the Low projection while High keeps
     // drawing, then swap (vgpu: never compile on the swap frame).
     let swapping = false
     const offQuality = subscribeQuality((q) => {
       if (q.effective !== "low" || tier === "low" || swapping || disposed) return
       swapping = true
-      const low = mkVisual("low")
-      void low
-        .compile(VT)
+      const low = mkProjection("low")
+      void low.kernel
+        .compile()
         .then(() => {
-          if (disposed) return low.dispose()
-          const previous = visual
+          if (disposed) {
+            low.kernel.dispose()
+            low.tex.dispose()
+            return
+          }
+          const previous = projection
           tier = "low"
-          visual = low
-          layout() // glow target to quarter resolution, uniforms onto the new pass
-          previous.dispose()
+          projection = low
+          visual.set({ glowTex: low.tex })
+          layout() // glow target to quarter resolution
+          previous.kernel.dispose()
+          previous.tex.dispose()
           spf = Math.min(spf, maxSteps())
           health.reset()
         })

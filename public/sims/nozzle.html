@@ -688,7 +688,7 @@ const FLOW=clamp(+(Q.get('flow')||0),0,4), FROST=clamp(+(Q.get('frost')||0),0,1)
 const FPS=clamp(+(Q.get('fps')||55),15,120), MINSPF=clamp(+(Q.get('minspf')||1),1,60), WARM=clamp(+(Q.get('warm')||0),0,3);
 let last=performance.now(), spf=Math.max(12,MINSPF), acc=0, frames=0, lastAdapt=last, lastRO=0;
 let PRELOAD=Q.has('preload');
-addEventListener('message',e=>{ if(e.data==='preload') PRELOAD=true; else if(e.data==='play'){ PRELOAD=false; last=performance.now(); } });
+addEventListener('message',e=>{ if(e.origin!==location.origin) return; if(e.data==='preload') PRELOAD=true; else if(e.data==='play'){ PRELOAD=false; last=performance.now(); } });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) last=performance.now(); });
 const BGH=/^[0-9a-f]{6}$/i.test(Q.get('bg')||'')?Q.get('bg'):'07080a';
 const BG=[0,2,4].map(i=>parseInt(BGH.slice(i,i+2),16)/255);
