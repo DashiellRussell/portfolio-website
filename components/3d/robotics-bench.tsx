@@ -2,13 +2,13 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fiber"
-import { useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 import { observeVisibility } from "@/lib/canvas"
 import { useOnScreenActive } from "@/components/space/on-screen"
 import { useIsMobile } from "@/components/space/use-mobile"
 import { Prewarm, fastShaders } from "./prewarm"
 import { qualityProbe, qualityState, subscribeQuality } from "./quality/store"
+import { preloadModel, useModel } from "./protected-model"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 
@@ -17,7 +17,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
  * winder, and a range of round drive boards.
  *
  * Both CAD models are exported from their source assemblies and
- * meshopt-compressed (see `public/models`):
+ * meshopt-compressed (sources in `assets/models`, served only as the encrypted
+ * packs scripts/pack-models.mjs builds; see ./protected-model):
  *   - the arm is split into link_0..link_3 by the rules in cyra-web's
  *     `config/link-map.json`, each mesh baked in world space, so joints are
  *     pivots built here at the actuator centres;
@@ -27,9 +28,6 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
  * The boards are procedural on purpose: they stand in for a product range, not
  * a specific PCB, so they carry no part numbers or real layouts.
  */
-
-const ARM_URL = "/models/cyra-arm.glb"
-const WINDER_URL = "/models/stator-winder.glb"
 
 // Bench layout (metres): arm on the left, winder on the right, boards between.
 const ARM_POS: [number, number, number] = [-0.42, 0.002, -0.1]
@@ -83,7 +81,7 @@ function armMaterial(src: THREE.MeshStandardMaterial) {
 
 /** Rebuilds the arm as a joint chain: link_0 → J1 (yaw) → J2 → J3 (pitch). */
 function useArmRig() {
-  const { scene } = useGLTF(ARM_URL)
+  const { scene } = useModel("arm")
   return useMemo(() => {
     const src = scene.clone(true)
     src.traverse((o) => {
@@ -196,9 +194,27 @@ const RETRACT_M = 0.035 // clears the guide, which reaches 8 mm into the stator'
 const TOOTH = (Math.PI * 2) / 18
 
 function Winder({ still }: { still: boolean }) {
-  const { scene } = useGLTF(WINDER_URL)
+  const { scene } = useModel("winder")
+  const vgpu = useThree((s) => !!(s.gl as unknown as { isVgpuRenderer?: boolean }).isVgpuRenderer)
   const parts = useMemo(() => {
     const root = scene.clone(true)
+    // The acrylic cover is transmissive. three's WebGLRenderer pays for that
+    // with a second render of the whole scene every frame. The vgpu renderer
+    // draws it as tinted see-through instead (standard.wgsl); on WebGL, bake
+    // the same approximation into the material and skip the extra pass.
+    if (!vgpu)
+      root.traverse((o) => {
+        const mesh = o as THREE.Mesh
+        if (!mesh.isMesh) return
+        const m = mesh.material as THREE.MeshPhysicalMaterial
+        if (!m.isMeshPhysicalMaterial || !(m.transmission > 0)) return
+        const glass = m.clone()
+        glass.opacity = m.opacity * (1 - 0.85 * m.transmission)
+        glass.color.multiplyScalar(1 - m.transmission)
+        glass.transmission = 0
+        glass.transparent = true
+        mesh.material = glass
+      })
     const get = (n: string) => root.getObjectByName(n)
     // the status bar is a gauge: an unlit copy shows its full length, the lit
     // one scales from its left end with coil progress
@@ -213,7 +229,7 @@ function Winder({ still }: { still: boolean }) {
       led.parent?.add(unlit)
     }
     return { root, spinner: get("spinner"), pulley: get("pulley"), carriage: get("carriage"), stator: get("stator"), led }
-  }, [scene])
+  }, [scene, vgpu])
   const { root, spinner, pulley, carriage, stator, led } = parts
 
   useFrame((state, dt) => {
@@ -905,7 +921,7 @@ export function RoboticsBench({
   )
 }
 
-useGLTF.preload(ARM_URL)
-useGLTF.preload(WINDER_URL)
+preloadModel("arm")
+preloadModel("winder")
 
 export default RoboticsBench

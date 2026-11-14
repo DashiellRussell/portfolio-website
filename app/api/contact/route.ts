@@ -14,16 +14,46 @@ export const runtime = "nodejs"
 
 const LIMITS = { name: 120, email: 200, org: 160, subject: 160, message: 5000 }
 
-// best-effort flood control per instance: 5 sends per IP per 10 minutes
+/** Largest request body accepted, in bytes: the limits above plus JSON overhead. */
+const MAX_BODY = 16 * 1024
+
+// Best-effort flood control per instance: 5 sends per IP per 10 minutes, and
+// 30 in total per hour, so rotating IPs can't turn the form into a mailer.
 const WINDOW_MS = 10 * 60 * 1000
+const GLOBAL_WINDOW_MS = 60 * 60 * 1000
+const GLOBAL_MAX = 30
 const hits = new Map<string, number[]>()
+let allHits: number[] = []
 function limited(ip: string) {
   const now = Date.now()
+  allHits = allHits.filter((t) => now - t < GLOBAL_WINDOW_MS)
+  // drop idle IPs so the map can't grow without bound
+  if (hits.size > 1000) for (const [k, v] of hits) if (now - v[v.length - 1] >= WINDOW_MS) hits.delete(k)
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS)
   recent.push(now)
   hits.set(ip, recent)
-  return recent.length > 5
+  if (recent.length > 5 || allHits.length >= GLOBAL_MAX) return true
+  allHits.push(now)
+  return false
 }
+
+/** Same-origin check: browsers send Origin on every cross-site POST. */
+function sameOrigin(req: Request) {
+  const origin = req.headers.get("origin")
+  if (!origin) return req.headers.get("sec-fetch-site") !== "cross-site"
+  try {
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host")
+    return new URL(origin).host === host
+  } catch {
+    return false
+  }
+}
+
+// one plain address, nothing nodemailer could read as a list or a display name
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/
+// control characters (including CR/LF) never belong in a name or subject line
+const oneLine = (s: string) => s.replace(/[\u0000-\u001f\u007f]+/g, " ").trim()
+const looksLikeLink = (s: string) => /:\/\/|www\.|\.(com|net|org|io|ru|xyz|top|info)\b/i.test(s)
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
@@ -42,9 +72,18 @@ function shell(title: string, body: string) {
 }
 
 export async function POST(req: Request) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid request." }, { status: 403 })
+  if (!(req.headers.get("content-type") ?? "").includes("application/json"))
+    return NextResponse.json({ error: "Invalid request." }, { status: 415 })
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY)
+    return NextResponse.json({ error: "That message is too long." }, { status: 413 })
+
   let data: Record<string, unknown>
   try {
-    data = await req.json()
+    const raw = await req.text()
+    if (raw.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 413 })
+    data = JSON.parse(raw)
+    if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("not an object")
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 })
   }
@@ -53,16 +92,18 @@ export async function POST(req: Request) {
   if (typeof data.website === "string" && data.website.trim() !== "") return NextResponse.json({ ok: true })
 
   const str = (k: keyof typeof LIMITS) => (typeof data[k] === "string" ? (data[k] as string).trim().slice(0, LIMITS[k]) : "")
-  const name = str("name")
+  const name = oneLine(str("name"))
   const email = str("email")
-  const org = str("org")
+  const org = oneLine(str("org"))
   const message = str("message")
-  const subject = str("subject")
+  const subject = oneLine(str("subject"))
 
-  if (!name) return NextResponse.json({ error: "Add your name." }, { status: 400 })
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "That email address doesn't look right." }, { status: 400 })
+  // the name is the one thing the confirmation email repeats, so it can't carry a link
+  if (!name || looksLikeLink(name)) return NextResponse.json({ error: "Add your name." }, { status: 400 })
+  if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "That email address doesn't look right." }, { status: 400 })
 
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown"
+  // Vercel sets x-real-ip / x-forwarded-for itself and overwrites what clients send
+  const ip = req.headers.get("x-real-ip") ?? ((req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown")
   if (limited(ip)) return NextResponse.json({ error: "Too many messages. Try again in a few minutes." }, { status: 429 })
 
   const host = process.env.SMTP_HOST
@@ -86,7 +127,7 @@ export async function POST(req: Request) {
     await transport.sendMail({
       from: `"Portfolio contact" <${from}>`,
       to,
-      replyTo: `"${name.replace(/"/g, "")}" <${email}>`,
+      replyTo: { name, address: email },
       subject: subject ? `${subject} · ${who}` : `New enquiry from ${who}`,
       text: `${subject ? subject + "\n\n" : ""}${message || "(no message)"}\n\n${who}\n${email}`,
       html: shell(
@@ -99,19 +140,19 @@ export async function POST(req: Request) {
       ),
     })
 
-    // confirmation to them
+    // Confirmation to them. It deliberately doesn't quote their message back:
+    // the address is unverified, so echoing it would let anyone send any text
+    // to anyone from this Gmail account (and get the account flagged as spam).
     await transport.sendMail({
       from: `"Dashiell Russell" <${from}>`,
-      to: email,
+      to: { name, address: email },
       replyTo: to,
       subject: "Thanks for getting in touch",
-      text: `Hi ${name},\n\nThanks for reaching out. I've got your message and will get back to you soon.${message ? `\n\nWhat you sent:\n${message}` : ""}\n\nDashiell`,
+      text: `Hi ${name},\n\nThanks for reaching out. I've got your message and will get back to you soon.\n\nDashiell`,
       html: shell(
         "Message received",
         `<p style="margin:0 0 16px">Hi ${safe.name},</p>
          <p style="margin:0 0 16px">Thanks for reaching out. I've got your message and will get back to you soon.</p>
-         ${message || subject ? `<p style="margin:0 0 8px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8b97ad">What you sent</p>
-         <div style="margin:0 0 20px;padding:14px 16px;border-left:2px solid #ff6b2c;background:#0e1422">${subject ? `<p style="margin:0 0 6px;color:#e8ecf5">${safe.subject}</p>` : ""}<p style="margin:0">${safe.message || noMessage}</p></div>` : ""}
          <p style="margin:0 0 4px">Dashiell</p>
          <p style="margin:0"><a href="https://www.linkedin.com/in/dashiell-russell-9973482a1" style="color:#35d6f0;text-decoration:none">LinkedIn</a> · <a href="https://github.com/DashiellRussell" style="color:#35d6f0;text-decoration:none">GitHub</a></p>`
       ),
