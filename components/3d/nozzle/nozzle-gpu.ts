@@ -21,6 +21,8 @@ import initShader from "./init.wgsl"
 import stepShader from "./step.wgsl"
 import deriveShader from "./derive.wgsl"
 import projectShader from "./project.wgsl"
+import flipStashShader from "./flip-stash.wgsl"
+import flipPairShader from "./flip-pair.wgsl"
 import visualShader from "./visual.wgsl"
 import blurShader from "./blur.wgsl"
 import displayShader from "./display.wgsl"
@@ -50,7 +52,16 @@ import { qualityProbe, qualityState, subscribeQuality } from "../quality/store"
  *    axisymmetric, so a ray's glow depends only on where it crosses the axis
  *    plane. project.wgsl integrates that once per texel of a fixed half-plane
  *    grid at the solver's own resolution, and the screen pass is one bilinear
- *    fetch, so the costliest pass no longer scales with the canvas size.
+ *    fetch, so the costliest pass no longer scales with the canvas size;
+ *  - the solver only runs while it has something to show. Like baked VFX in a
+ *    game, it records a flipbook of its own steady output once (64 frames,
+ *    one per 120 steps, which is what a full-speed frame advances), then plays
+ *    that back on the wall clock with the live flicker noise on top, at the
+ *    cost of the glow pass alone. When the pointer reaches into the flow the
+ *    real solver resumes from where it stopped and crossfades in; once the
+ *    gas has settled after the pointer leaves, it fades back to the loop.
+ *    So the plume is always at full speed, even on a GPU that could never
+ *    run 7,200 solver steps a second, and costs ~nothing while untouched.
  */
 
 export interface NozzleOptions {
@@ -79,8 +90,18 @@ export interface NozzleController {
     grid: [number, number]
     /** The tier currently drawing (it lags a downgrade request until Low has compiled). */
     tier(): QualityTier
+    /** What's drawing: warming up, recording the flipbook, playing it, or the live solver. */
+    mode(): Mode
+    /** Crossfade between live (0) and the flipbook (1). */
+    blend(): number
+    /** Runs one solver step and records the result as the next flipbook frame. */
+    capture(): void
+    /** Pins what the next draw shows: the crossfade weight and the flipbook frame. */
+    show(blend: number, frame: number): void
   }
 }
+
+export type Mode = "warm" | "record" | "loop" | "live"
 
 /* -------------------------------------------------------------- constants */
 
@@ -116,6 +137,22 @@ const TILE: [number, number] = [16, 8]
 
 /** The projected glow covers x in [0, PROJ_SPAN[0]] (the longest displayed length) and |y| in [0, 0.5]. */
 const PROJ_SPAN: [number, number] = [3.0, 0.5]
+/**
+ * Flipbook: frames recorded, and solver steps between them (one full-speed
+ * frame's worth, so playing a frame per 1/60 s matches the live sim at full
+ * speed). Frame to frame the flow already jitters with the chamber's pressure
+ * flutter, so the loop needs no crossfade at its seam.
+ */
+const FLIP_FRAMES = 64
+const FLIP_STEPS = MAX_STEPS
+const FLIP_FPS = 60
+/** Sim time to keep solving after the probe lets go, so the gas is back to steady before the loop takes over. */
+const SETTLE = 1.0
+/** Live <-> flipbook crossfade, in seconds. */
+const BLEND_S = 0.35
+/** A pointer that hasn't moved for this long stops probing, so the flow can settle back to the loop. */
+const POINTER_IDLE_MS = 2000
+
 /** Projection texels per sim unit: the solver's resolution on High, half that on Low. */
 const projDensity = (t: QualityTier) => (t === "low" ? 0.5 : 1) * (NR / RD)
 
@@ -163,6 +200,22 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       format: "rgba16float",
       usage: ["storage_binding", "texture_binding"],
     })
+
+    // The flipbook covers the displayed region at the solver's resolution
+    // (the grid starts at the origin, so texel (i, j) is cell (i, j)), with
+    // two frames per texel: ~10 MB for 64 frames.
+    const FLIP_SIZE: [number, number] = [Math.round(PROJ_SPAN[0] / H), Math.round(PROJ_SPAN[1] / H)]
+    const flipGroups: [number, number] = [Math.ceil(FLIP_SIZE[0] / TILE[0]), Math.ceil(FLIP_SIZE[1] / TILE[1])]
+    const flip = texture(gpu, {
+      kind: "2d-array",
+      size: FLIP_SIZE,
+      layers: FLIP_FRAMES / 2,
+      format: "rgba16float",
+      usage: ["storage_binding", "texture_binding"],
+    })
+    const stash = texture(gpu, { kind: "2d", size: FLIP_SIZE, format: "rgba16float", usage: ["storage_binding", "texture_binding"] })
+    const flipStash = compute(gpu, flipStashShader, { label: "nozzle.flip.stash", set: { fields, stashOut: stash } })
+    const flipPair = compute(gpu, flipPairShader, { label: "nozzle.flip.pair", set: { cap: { layer: 0 }, fields, stash, flipOut: flip } })
 
     // Per-stage values (pressure, time, turbulence), one vec4 row per RK stage
     // (two per step), uploaded once per frame; the kernel indexes them with a
@@ -223,10 +276,14 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
             tK: 875,
             time: 0,
             turb: TURB,
+            blend: 0,
+            flipLayer: 0,
+            flipHalf: 0,
           },
           fields,
           fieldSampler: linear,
           glowOut: tex,
+          flip,
         },
       })
       return { tex, kernel, groups: [Math.ceil(size[0] / TILE[0]), Math.ceil(size[1] / TILE[1])] }
@@ -247,6 +304,8 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       ...steps.map((s) => s.compile()),
       ...derives.map((d) => d.compile()),
       reset.compile(),
+      flipStash.compile(),
+      flipPair.compile(),
       projection.kernel.compile(),
       visual.compile(VT),
       blur.compile(VB1a),
@@ -334,8 +393,30 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       rows[i * 4 + 2] = ignited ? TURB : 0
     }
 
-    /** Encodes `n` solver steps and a field update into one compute pass. */
-    function solve(n: number) {
+    /*
+     * The game loop's state. `mode` says who draws the plume:
+     *   warm    the solver burns through the ignition transient (mostly off screen)
+     *   record  the solver runs and every FLIP_STEPS steps becomes a flipbook frame
+     *   loop    the flipbook plays; the solver is idle
+     *   live    the pointer is in the flow, so the real solver runs
+     * `blend` crossfades the glow's gas state from live (0) to the flipbook (1).
+     */
+    let mode: Mode = "warm"
+    let blend = 0
+    /** Flipbook playhead, in frames, on the wall clock. */
+    let flipClock = 0
+    /** Flipbook frames recorded so far (0..FLIP_FRAMES). */
+    let flipCount = 0
+    /** Solver steps since the last recorded frame. */
+    let recSteps = 0
+    /** Sim time before which the flow still carries a probe's disturbance. */
+    let calmAt = 0
+
+    /**
+     * Encodes `n` solver steps and a field update into one compute pass, and
+     * with `capture` stores the result as the next flipbook frame.
+     */
+    function solve(n: number, capture = false) {
       n = Math.min(n, MAX_STAGES / 2)
       // the host half of each step: the pressure schedule and per-stage values
       let par = parity
@@ -353,6 +434,8 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
       }
       params.write(rows.subarray(0, n * 8))
       counterA.write(zero)
+      const slot = capture && flipCount < FLIP_FRAMES ? flipCount++ : -1
+      if (slot >= 0 && slot % 2 === 1) flipPair.set({ cap: { layer: slot >> 1 } })
       // the GPU half: n dispatches with fixed bindings, nothing set between them
       track(frame(gpu, (f) =>
         f.computePass({ label: "nozzle.solve" }, (pass) => {
@@ -361,6 +444,8 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
             par ^= 1
           }
           pass.dispatch(derives[par], groups[0], groups[1])
+          // even frames wait in the stash; odd ones write the pair to a layer
+          if (slot >= 0) pass.dispatch(slot % 2 === 0 ? flipStash : flipPair, flipGroups[0], flipGroups[1])
         })
       ))
       parity = par
@@ -369,7 +454,8 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
     function draw(out: Target = view) {
       track(frame(gpu, (f) => {
         const { kernel, groups: pg } = projection
-        kernel.set({ proj: { time: (performance.now() / 1000) * FLOW } })
+        const fi = Math.floor(flipClock) % FLIP_FRAMES
+        kernel.set({ proj: { time: (performance.now() / 1000) * FLOW, blend, flipLayer: fi >> 1, flipHalf: fi & 1 } })
         f.computePass({ label: "nozzle.project" }, (pass) => pass.dispatch(kernel, pg[0], pg[1]))
         f.pass(VT, visual)
         blur.set({ blur: { dir: [2 / VT.size[0], 0], out: VB1a.size }, src: VT })
@@ -404,6 +490,9 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
 
     // Client px -> sim (x, r), inverting the display transform in layout().
     let pointerAt: { x: number; y: number } | null = null
+    let pointerMovedAt = 0
+    /** The pointer, unless it has rested for POINTER_IDLE_MS: a parked cursor shouldn't keep the solver running. */
+    const livePointer = () => (pointerAt && performance.now() - pointerMovedAt < POINTER_IDLE_MS ? pointerAt : null)
     let probePos: [number, number] | null = null
     const probeVel: [number, number] = [0, 0]
     let probeOn = 0
@@ -424,7 +513,8 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
 
     /** Moves the probe for this frame; `simDt` is the sim time this frame advances. */
     function updateProbe(realDt: number, simDt: number) {
-      const at = pointerAt ? toSim(pointerAt) : null
+      const p = livePointer()
+      const at = p ? toSim(p) : null
       // ease in when the pointer arrives and out after it leaves (it stays where it left)
       probeOn += ((at ? 1 : 0) - probeOn) * Math.min(1, realDt * 8)
       if (probeOn < 0.002) probeOn = 0
@@ -489,6 +579,24 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         .catch((err) => console.warn("[nozzle] Low tier unavailable, staying on High", err))
     })
 
+    /**
+     * Runs up to `budget` solver steps toward the flipbook, capturing a frame
+     * every FLIP_STEPS steps once the flow is calm. Returns the steps taken.
+     */
+    function record(budget: number) {
+      if (t < calmAt) {
+        solve(budget)
+        return budget
+      }
+      const n = Math.min(budget, FLIP_STEPS - recSteps)
+      recSteps += n
+      const capture = recSteps >= FLIP_STEPS
+      if (capture) recSteps = 0
+      solve(n, capture)
+      if (flipCount >= FLIP_FRAMES) mode = "loop"
+      return n
+    }
+
     function loop(now: number) {
       if (disposed) return
       if (inFlight >= 4) {
@@ -496,34 +604,72 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         raf = requestAnimationFrame(loop)
         return
       }
+      if (mode === "warm" && !warming()) mode = "record"
       if (!active) {
-        // off screen: finish the warm-up gently without drawing, then stop
-        // scheduling frames entirely until the card comes into view
-        if (warming()) {
-          solve(WARM_STEPS_PRELOAD)
-          raf = requestAnimationFrame(loop)
-        } else raf = 0
+        // off screen: finish the warm-up and the recording gently without
+        // drawing, then stop scheduling frames until the card is in view
         last = now
+        if (mode === "warm") solve(WARM_STEPS_PRELOAD)
+        else if (mode === "record") record(FLIP_STEPS)
+        else {
+          // nobody is watching a live flow: hand straight back to the loop
+          if (mode === "live") mode = "loop"
+          blend = 1
+          raf = 0
+          return
+        }
+        raf = requestAnimationFrame(loop)
         return
       }
       // clamp so a long pause doesn't read as one huge slow frame and starve spf
       const fdt = Math.min(Math.max((now - last) / 1000, 0), 0.1)
       last = now
-      const n = warming() ? WARM_STEPS_ACTIVE : spf
+
+      // A pointer over the plume (or a probe still easing out) disturbs the
+      // flow: the live solver takes over, and the flow counts as calm again
+      // only SETTLE sim units after it lets go.
+      const p = livePointer()
+      const over = p !== null && toSim(p) !== null
+      const disturbed = over || !probeIdle
+      if (disturbed) {
+        calmAt = t + SETTLE
+        if (mode === "loop") mode = "live"
+        if (mode === "record" && (flipCount > 0 || recSteps > 0)) {
+          // don't bake a disturbance into the loop: start the recording over
+          flipCount = 0
+          recSteps = 0
+        }
+      } else if (mode === "live" && t >= calmAt) {
+        mode = flipCount >= FLIP_FRAMES ? "loop" : "record"
+      }
+
+      // the solver runs while it is shown, or still fading out under the loop
+      let n = 0
+      if (mode === "warm") n = WARM_STEPS_ACTIVE
+      else if (mode === "record") n = record(spf)
+      else if (mode === "live" || blend < 1) n = spf
       updateProbe(fdt, n * DT)
-      solve(n)
+      if (n > 0 && mode !== "record") solve(n)
+
+      blend = clamp(blend + (mode === "loop" ? 1 : -1) * (fdt / BLEND_S), 0, 1)
+      flipClock = (flipClock + fdt * FLIP_FPS) % FLIP_FRAMES
       draw()
       sample(now, true)
-      // adapt steps/frame to hold the frame rate
-      acc += fdt
-      frames++
+
+      // adapt steps/frame to hold the frame rate, judged only on frames that solved
+      if (n > 0 && mode !== "warm") {
+        acc += fdt
+        frames++
+      }
       if (now - lastAdapt > 350) {
-        const avg = acc / frames
+        if (frames > 0) {
+          const avg = acc / frames
+          if (avg > 1 / (FPS * 0.82)) spf = Math.max(MINSPF, Math.floor(spf * 0.8))
+          else if (avg < 1 / FPS) spf = Math.min(maxSteps(), Math.ceil(spf * 1.3) + 1)
+        }
         acc = 0
         frames = 0
         lastAdapt = now
-        if (avg > 1 / (FPS * 0.82)) spf = Math.max(MINSPF, Math.floor(spf * 0.8))
-        else if (avg < 1 / FPS) spf = Math.min(maxSteps(), Math.ceil(spf * 1.3) + 1)
       }
       raf = requestAnimationFrame(loop)
     }
@@ -551,6 +697,7 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         kick()
       },
       pointer(at) {
+        if (at && (!pointerAt || at.x !== pointerAt.x || at.y !== pointerAt.y)) pointerMovedAt = performance.now()
         pointerAt = at
       },
       debug: {
@@ -567,6 +714,13 @@ export async function startNozzle(canvas: HTMLCanvasElement, opts: NozzleOptions
         },
         grid: [NX, NR],
         tier: () => tier,
+        mode: () => mode,
+        blend: () => blend,
+        capture: () => solve(1, true),
+        show: (b, frame) => {
+          blend = b
+          flipClock = frame
+        },
       },
       dispose() {
         if (disposed) return
