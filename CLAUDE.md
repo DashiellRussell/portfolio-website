@@ -100,7 +100,10 @@ The contact form in ContactSection submits to `/api/contact` which:
 ### WebGPU (vgpu)
 
 Two card visuals render through Vercel's [vgpu](https://vgpu.sh) on WebGPU, each with a WebGL fallback:
-- **Nozzle sim** (`components/3d/nozzle/`): the rocket engine CFD solver as vgpu compute kernels plus effects. The glow is integrated once per frame in sim space (`project.wgsl`, an Abel projection of the axisymmetric plume on a fixed grid at the solver's resolution); `visual.wgsl` only stretches it over the screen, so the glow cost doesn't grow with canvas size. `NozzleSim` falls back to the WebGL page `public/sims/nozzle.html` in an iframe (or with `?nozzle=webgl`). The pointer is a probe in the flow.
+- **Nozzle sim** (`components/3d/nozzle/`): the rocket engine CFD solver as vgpu compute kernels plus effects. The glow is integrated once per frame in sim space (`project.wgsl`, an Abel projection of the axisymmetric plume on a fixed grid at the solver's resolution); `visual.wgsl` only stretches it over the screen, so the glow cost doesn't grow with canvas size.
+  - Hybrid, like baked game VFX: after warm-up the solver records a 64-frame flipbook of its own steady output (one frame per 120 steps, two frames per rgba16float texel; `flip-stash.wgsl` / `flip-pair.wgsl`), then idles while the glow plays it back at 60 fps on the wall clock with live flicker noise. A pointer in the flow (`mode` "live") resumes the real solver from its saved state and crossfades it in; after the pointer leaves or rests for 2 s and the gas settles (`SETTLE` sim units), it fades back to the loop. Modes: warm → record → loop ⇄ live.
+  - `debug.capture()` / `debug.show(blend, frame)` pin the flipbook for headless pixel checks; drawing to the canvas fails headless, so tests draw offscreen (`debug.snapshot()`).
+  - `NozzleSim` falls back to the WebGL page `public/sims/nozzle.html` in an iframe (or with `?nozzle=webgl`). The pointer is a probe in the flow.
 - **Robot bench** (`components/3d/vgpu-three/`): `VgpuRenderer`, a three.js renderer drawn by vgpu. R3F, the models and the animation are unchanged; the `<Canvas gl>` factory in `robotics-bench.tsx` falls back to `WebGLRenderer` (or with `?bench=webgl`).
 
 Follow the vgpu docs that ship with the package (`npx vgpu docs cat getting-started.md`, `performance-playbook`, `shipping-to-production`):
@@ -110,7 +113,7 @@ Follow the vgpu docs that ship with the package (`npx vgpu docs cat getting-star
 
 Render quality (`components/3d/quality/`) follows vgpu's adaptive-quality guide; `frame-health.ts`, `quality.ts` and `quality-signals.ts` are copied from its example:
 - every visitor starts High; GPU tier (detect-gpu, lazily imported), battery and presented-frame health can each ask for Low, once, site-wide; nothing upgrades automatically
-- Low: the nozzle glow projection runs at half the solver's resolution with 12 ray samples (the `SAMPLES` override), is drawn at quarter resolution, and the solver takes at most 60 steps a frame; the bench renders at 1x instead of 1.5x
+- Low: the nozzle glow projection runs at half the solver's resolution with 12 ray samples (the `SAMPLES` override), is drawn at quarter resolution, and the live solver takes at most 60 steps a frame (the flipbook always plays at full speed); the bench renders at 1x instead of 1.5x
 - `?quality=low` / `?quality=high` forces a tier
 - `npm run dev` / `build` copy detect-gpu's benchmark tables into `public/gpu-benchmarks` (gitignored) so the tier lookup is same-origin
 
